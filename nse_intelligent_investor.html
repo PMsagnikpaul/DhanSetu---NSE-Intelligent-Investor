@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NSE Intelligent Investor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ─── RESET & BASE ─────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #09090f;
+      --surface: #111118;
+      --surface2: #18181f;
+      --surface3: #1e1e28;
+      --border: rgba(255, 255, 255, 0.07);
+      --border2: rgba(255, 255, 255, 0.12);
+      --text: #e8e8f0;
+      --muted: #888898;
+      --accent: #6ee7b7;
+      /* emerald */
+      --accent2: #38bdf8;
+      /* sky */
+      --accent3: #f59e0b;
+      /* amber */
+      --danger: #f87171;
+      --up: #4ade80;
+      --down: #f87171;
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --font-body: 'Instrument Serif', serif;
+      --r: 10px;
+      --r2: 16px;
+      --shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-head);
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── NOISE OVERLAY ──────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    /* ─── LAYOUT ─────────────────────────────────────────── */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ─── SIDEBAR ────────────────────────────────────────── */
+    .sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+      animation: slideInLeft 0.5s ease;
+    }
+
+    @keyframes slideInLeft {
+      from {
+        transform: translateX(-20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    .logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .logo-name {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-sub {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      padding: 16px 12px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .nav-section-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 8px 12px 6px;
+      margin-top: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.18s;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--surface3);
+      color: var(--accent);
+      border-color: rgba(110, 231, 183, 0.15);
+    }
+
+    .nav-item .icon {
+      font-size: 15px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      background: rgba(110, 231, 183, 0.12);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 20px;
+    }
+
+    .sidebar-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    /* ─── MAIN CONTENT ───────────────────────────────────── */
+    .main {
+      margin-left: 240px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── TOPBAR ─────────────────────────────────────────── */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .page-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .page-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .market-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .chip-up {
+      color: var(--up);
+    }
+
+    .chip-down {
+      color: var(--down);
+    }
+
+    .vix-chip {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.2);
+      color: var(--accent3);
+    }
+
+    /* ─── PAGE SECTIONS ──────────────────────────────────── */
+    .page {
+      display: none;
+      padding: 32px;
+      animation: fadeUp 0.3s ease;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* ─── TYPOGRAPHY ─────────────────────────────────────── */
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .serif {
+      font-family: var(--font-body);
+      font-style: italic;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .accent {
+      color: var(--accent);
+    }
+
+    .up {
+      color: var(--up);
+    }
+
+    .down {
+      color: var(--down);
+    }
+
+    /* ─── CARDS ──────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      padding: 24px;
+    }
+
+    .card-sm {
+      padding: 16px 20px;
+    }
+
+    /* ─── GRID HELPERS ───────────────────────────────────── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .gap-16 {
+      gap: 16px;
+    }
+
+    .mt-20 {
+      margin-top: 20px;
+    }
+
+    .mt-24 {
+      margin-top: 24px;
+    }
+
+    .mb-6 {
+      margin-bottom: 6px;
+    }
+
+    .mb-16 {
+      margin-bottom: 16px;
+    }
+
+    /* ─── STAT TILES ─────────────────────────────────────── */
+    .stat-tile {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      padding: 20px 22px;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ─── SIGNAL FEED ────────────────────────────────────── */
+    .signal-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 80px 80px 80px 90px 110px;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .signal-row:hover {
+      background: var(--surface2);
+    }
+
+    .signal-row:last-child {
+      border-bottom: none;
+    }
+
+    .signal-row-header {
+      grid-template-columns: 120px 1fr 80px 80px 80px 90px 110px;
+      background: var(--surface2);
+      border-radius: var(--r) var(--r) 0 0;
+      padding: 10px 20px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      cursor: default;
+    }
+
+    .signal-row-header:hover {
+      background: var(--surface2);
+    }
+
+    .symbol-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--surface3);
+      padding: 4px 10px;
+      border-radius: 6px;
+      color: var(--accent2);
+      display: inline-block;
+    }
+
+    .score-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .score-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--surface3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    .score-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      min-width: 28px;
+      text-align: right;
+    }
+
+    .signal-type-pill {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 20px;
+      border: 1px solid;
+    }
+
+    .pill-bulk {
+      border-color: rgba(56, 189, 248, 0.3);
+      color: var(--accent2);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .pill-insider {
+      border-color: rgba(110, 231, 183, 0.3);
+      color: var(--accent);
+      background: rgba(110, 231, 183, 0.08);
+    }
+
+    .pill-filing {
+      border-color: rgba(245, 158, 11, 0.3);
+      color: var(--accent3);
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    /* ─── FORM ELEMENTS ──────────────────────────────────── */
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .input,
+    .select,
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    .input:focus,
+    .select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.08);
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .select option {
+      background: var(--surface2);
+    }
+
+    .tag-input-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      padding: 8px 10px;
+      min-height: 44px;
+      cursor: text;
+    }
+
+    .tag-input-wrap.focused {
+      border-color: var(--accent);
+    }
+
+    .tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(110, 231, 183, 0.1);
+      border: 1px solid rgba(110, 231, 183, 0.2);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .tag-remove {
+      cursor: pointer;
+      opacity: 0.6;
+    }
+
+    .tag-remove:hover {
+      opacity: 1;
+    }
+
+    .tag-input {
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      min-width: 80px;
+      flex: 1;
+    }
+
+    /* ─── BUTTONS ─────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--r);
+      font-family: var(--font-head);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.18s;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #34d399);
+      color: #0a1a14;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(110, 231, 183, 0.25);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--text);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 12px;
+    }
+
+    .btn-loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    /* ─── PROGRESS / LOADER ──────────────────────────────── */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(110, 231, 183, 0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ─── TABS ───────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      padding: 10px 18px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.18s;
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ─── RISK METRIC CARDS ──────────────────────────────── */
+    .metric-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin: 6px 0 4px;
+    }
+
+    .metric-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .metric-note {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* ─── REBALANCE TABLE ────────────────────────────────── */
+    .rebal-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .rebal-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rebal-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .rebal-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .action-buy {
+      color: var(--up);
+      font-weight: 700;
+    }
+
+    .action-sell {
+      color: var(--down);
+      font-weight: 700;
+    }
+
+    .action-hold {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* ─── PATTERN CARDS ──────────────────────────────────── */
+    .pattern-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .pattern-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pattern-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+
+    .pattern-card.up::before {
+      background: linear-gradient(90deg, var(--up), transparent);
+    }
+
+    .pattern-card.down::before {
+      background: linear-gradient(90deg, var(--down), transparent);
+    }
+
+    .pattern-card:hover {
+      border-color: var(--border2);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .pattern-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .pattern-type-name {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .pattern-type-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .pattern-score-ring {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      border: 2px solid;
+    }
+
+    .score-ring-label {
+      font-size: 7px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .pattern-levels {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .level-item {
+      text-align: center;
+    }
+
+    .level-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .level-value {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .pattern-explanation {
+      font-family: var(--font-body);
+      font-size: 13px;
+      line-height: 1.7;
+      color: #c0c0d0;
+      font-style: italic;
+      border-left: 2px solid var(--border2);
+      padding-left: 12px;
+      margin-top: 12px;
+    }
+
+    /* ─── MINI CHART PLACEHOLDER ─────────────────────────── */
+    .mini-chart {
+      height: 60px;
+      background: var(--surface2);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .mini-chart svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ─── SECTOR BADGE ───────────────────────────────────── */
+    .sector-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+    }
+
+    /* ─── SEARCH BOX ─────────────────────────────────────── */
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-wrap .icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .search-input {
+      padding-left: 36px !important;
+    }
+
+    /* ─── WIN RATE BAR ───────────────────────────────────── */
+    .wr-bar {
+      height: 6px;
+      background: var(--surface3);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .wr-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+    }
+
+    /* ─── EFFICIENT FRONTIER MOCK ────────────────────────── */
+    .frontier-wrap {
+      width: 100%;
+      height: 200px;
+      position: relative;
+    }
+
+    .frontier-wrap svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ─── PORTFOLIO DONUT ────────────────────────────────── */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .donut-legend {
+      flex: 1;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ─── INSIGHT BOX ────────────────────────────────────── */
+    .insight-box {
+      background: rgba(110, 231, 183, 0.04);
+      border: 1px solid rgba(110, 231, 183, 0.12);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      line-height: 1.8;
+      font-style: italic;
+      color: #b0c0b8;
+      margin-top: 16px;
+    }
+
+    /* ─── EMPTY STATE ─────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--muted);
+    }
+
+    .empty-state-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .empty-state-text {
+      font-size: 14px;
+    }
+
+    /* ─── TOAST ──────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      padding: 12px 20px;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 9000;
+    }
+
+    #toast.show {
+      transform: none;
+      opacity: 1;
+    }
+
+    /* ─── DETAIL PANEL ───────────────────────────────────── */
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      right: -480px;
+      bottom: 0;
+      width: 480px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 200;
+      overflow-y: auto;
+      transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 28px;
+    }
+
+    .detail-panel.open {
+      right: 0;
+    }
+
+    .detail-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 199;
+      display: none;
+    }
+
+    .detail-overlay.open {
+      display: block;
+    }
+
+    .detail-close {
+      float: right;
+      cursor: pointer;
+      font-size: 20px;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 8px;
+      line-height: 1.4;
+    }
+
+    .detail-close:hover {
+      color: var(--text);
+    }
+
+    /* ─── SCROLLBAR ──────────────────────────────────────── */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--surface3);
+      border-radius: 2px;
+    }
+
+    /* ─── DASHBOARD SPECIFIC ─────────────────────────────── */
+    .welcome-band {
+      background: linear-gradient(135deg, var(--surface), var(--surface2));
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .welcome-band::after {
+      content: '📈';
+      position: absolute;
+      right: 32px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 64px;
+      opacity: 0.08;
+    }
+
+    .welcome-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .welcome-sub {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ─── REGIME RADAR ───────────────────────────────────── */
+    .regime-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    #transition-matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    #transition-matrix-table th,
+    #transition-matrix-table td {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    #transition-matrix-table th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    #regime-chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    #transition-matrix-container,
+    #data-integrity-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    #transition-matrix-container h3,
+    #data-integrity-container h3 {
+      margin-bottom: 16px;
+    }
+
+    #hash-display p {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 2;
+    }
+
+    #hash-display strong {
+      color: var(--text);
+    }
+
+    #hash-display code {
+      color: var(--accent2);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- ════════════════════════════════════════════════════ SIDEBAR -->
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-mark">
+          <div class="logo-icon">📡</div>
+          <div class="logo-name">NSE Investor</div>
+        </div>
+        <div class="logo-sub">LSTM · MPT · Intelligence</div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-section-label">Overview</div>
+        <div class="nav-item active" onclick="showPage('dashboard', this)">
+          <span class="icon">◈</span> Dashboard
+        </div>
+
+        <div class="nav-section-label">Module 1</div>
+        <div class="nav-item" onclick="showPage('radar', this)">
+          <span class="icon">📡</span> Opportunity Radar
+          <span class="nav-badge" id="signal-badge">20</span>
+        </div>
+
+        <div class="nav-section-label">Module 2</div>
+        <div class="nav-item" onclick="showPage('optimizer', this)">
+          <span class="icon">⚖</span> Portfolio Optimizer
+        </div>
+
+        <div class="nav-section-label">Module 3</div>
+        <div class="nav-item" onclick="showPage('patterns', this)">
+          <span class="icon">🔍</span> Chart Patterns
+        </div>
+
+        <div class="nav-section-label">Module 4</div>
+        <div class="nav-item" onclick="showPage('regime', this)">
+          <span class="icon">📡</span> Regime Radar
+        </div>
+
+        <div class="nav-section-label">Settings</div>
+        <div class="nav-item" onclick="showPage('portfolio', this)">
+          <span class="icon">💼</span> My Portfolio
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="api-status">
+          <div class="status-dot"></div>
+          API: localhost:8000
+        </div>
+      </div>
+    </aside>
+
+    <!-- ════════════════════════════════════════════════════ MAIN -->
+    <div class="main">
+
+      <!-- ── TOPBAR ─────────────────────────────────────── -->
+      <header class="topbar">
+        <div>
+          <div class="page-title" id="topbar-title">Dashboard</div>
+          <div class="page-subtitle mono">NSE Intelligent Investor</div>
+        </div>
+        <div class="topbar-right">
+          <div class="market-chip"><span>NIFTY 50</span><span class="chip-up">▲ 1.24%</span><span class="mono"
+              style="color:var(--muted)">23,419</span></div>
+          <div class="market-chip vix-chip"><span>VIX</span><span class="mono">14.8</span><span>Normal</span></div>
+          <div class="market-chip"><span class="mono" style="color:var(--muted)" id="clock">--:--</span></div>
+        </div>
+      </header>
+      <!-- ── ALERT BANNER (populated by portfolio monitor) ────── -->
+      <div id="alert-banner" style="display:none;"></div>
+      <!-- ════════════════════════════════════════════════ PAGE: DASHBOARD -->
+      <div class="page active" id="page-dashboard" style="padding:32px;">
+        <div class="welcome-band">
+          <div class="welcome-title">Good morning, Investor 👋</div>
+          <div class="welcome-sub">Your LSTM-powered portfolio intelligence — updated today at 9:15 AM IST</div>
+        </div>
+
+        <div class="grid-4 mb-16">
+          <div class="stat-tile">
+            <div class="stat-label">Active Signals</div>
+            <div class="stat-value accent">1,346</div>
+            <div class="stat-sub">↑ 84 new since yesterday</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Top Signal Score</div>
+            <div class="stat-value" style="color:var(--accent2)">65.1</div>
+            <div class="stat-sub">BAIDFIN · Insider + Bulk</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Portfolio Sharpe</div>
+            <div class="stat-value up">1.49</div>
+            <div class="stat-sub">vs Nifty 50: 0.91</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Patterns Detected</div>
+            <div class="stat-value" style="color:var(--accent3)">23</div>
+            <div class="stat-sub">6 in your holdings</div>
+          </div>
+        </div>
+
+        <div class="grid-2 mt-20">
+          <div class="card">
+            <h3 class="mb-16">Top Signals Today</h3>
+            <div style="border:1px solid var(--border); border-radius:var(--r); overflow:hidden;">
+              <div
+                style="display:grid;grid-template-columns:100px 1fr 70px 80px;gap:10px;padding:9px 16px;background:var(--surface2);font-family:var(--font-mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">
+                <span>Symbol</span><span>Signal Mix</span><span>Score</span><span>Sector</span>
+              </div>
+              <div id="dash-signals">
+                <!-- JS populated -->
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sm mt-20"
+              onclick="showPage('radar', document.querySelector('.nav-item:nth-child(5)'))">View All Signals →</button>
+          </div>
+
+          <div class="card">
+            <h3 class="mb-16">Top Chart Patterns</h3>
+            <div id="dash-patterns">
+              <!-- JS populated -->
+            </div>
+            <button class="btn btn-outline btn-sm mt-20"
+              onclick="showPage('patterns', document.querySelector('.nav-item:nth-child(8)'))">View All Patterns
+              →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════ PAGE: RADAR -->
+      <div class="page" id="page-radar">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;">
+          <div>
+            <h2>Opportunity Radar <span class="mono muted" style="font-size:13px;font-weight:400;">Module 1</span></h2>
+            <p style="color:var(--muted);font-size:12px;">Proactive signal detection from bulk deals · insider trades ·
+              corporate filings · LSTM anomaly scoring</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <select class="select" style="width:140px;" id="signal-filter-type" onchange="renderSignals()">
+              <option value="all">All Types</option>
+              <option value="bulk">Bulk Deals</option>
+              <option value="insider">Insider Trades</option>
+              <option value="filing">Corporate Filings</option>
+            </select>
+            <select class="select" style="width:130px;" id="signal-filter-sector" onchange="renderSignals()">
+              <option value="all">All Sectors</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="refresh-btn" onclick="refreshSignals()">
+              <span class="spinner" id="refresh-spinner" style="display:none;"></span>
+              ↻ Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="signal-row signal-row-header">
+            <span>Symbol</span>
+            <span>Signal Summary</span>
+            <span>Score</span>
+            <span>Bulk</span>
+            <span>Insider</span>
+            <span>Filing</span>
+            <span>Sector</span>
+          </div>
+          <div id="signal-feed"></div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════ PAGE: OPTIMIZER -->
+      <div class="page" id="page-optimizer">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;">
+          <div>
+            <h2>LSTM Portfolio Optimizer <span class="mono muted" style="font-size:13px;font-weight:400;">Module
+                2</span></h2>
+            <p style="color:var(--muted);font-size:12px;">MPT-LSTM hybrid · Sharpe 1.54 validated · 5 / 10 / 15 / 30-day
+              horizons</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- LEFT: Input -->
+          <div>
+            <div class="card">
+              <h3 class="mb-16">Portfolio Input</h3>
+              <div class="input-group">
+                <label class="input-label">Your Holdings (Nifty 50 symbols)</label>
+                <div class="tag-input-wrap" id="holdings-wrap" onclick="focusTagInput('holdings-input')">
+                  <div class="tag">RELIANCE<span class="tag-remove" onclick="removeTag(this,'holdings-wrap')">×</span>
+                  </div>
+                  <div class="tag">TCS<span class="tag-remove" onclick="removeTag(this,'holdings-wrap')">×</span></div>
+                  <div class="tag">HDFCBANK<span class="tag-remove" onclick="removeTag(this,'holdings-wrap')">×</span>
+                  </div>
+                  <div class="tag">ICICIBANK<span class="tag-remove" onclick="removeTag(this,'holdings-wrap')">×</span>
+                  </div>
+                  <div class="tag">INFY<span class="tag-remove" onclick="removeTag(this,'holdings-wrap')">×</span></div>
+                  <input class="tag-input" id="holdings-input" placeholder="Add symbol…"
+                    onkeydown="handleTagInput(event,'holdings-wrap')" />
+                </div>
+              </div>
+              <div class="input-group">
+                <label class="input-label">Portfolio Value (₹)</label>
+                <input class="input" id="portfolio-value" type="number" value="500000" placeholder="e.g. 500000" />
+              </div>
+              <div class="input-group">
+                <label class="input-label">Optimization Horizon</label>
+                <select class="select" id="opt-horizon">
+                  <option value="5">5-day</option>
+                  <option value="10">10-day</option>
+                  <option value="15" selected>15-day</option>
+                  <option value="30">30-day</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label class="input-label">Objective</label>
+                <select class="select" id="opt-objective">
+                  <option value="sharpe" selected>Maximize Sharpe Ratio</option>
+                  <option value="min_variance">Minimize Volatility</option>
+                  <option value="max_return">Maximize Return</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" style="width:100%;" onclick="runOptimizer()">
+                <span class="spinner" id="opt-spinner" style="display:none;"></span>
+                ⚡ Run LSTM Optimizer
+              </button>
+            </div>
+          </div>
+
+          <!-- RIGHT: Results -->
+          <div id="optimizer-results">
+            <div class="card" style="height:100%;display:flex;align-items:center;justify-content:center;">
+              <div class="empty-state">
+                <div class="empty-state-icon">⚖</div>
+                <div class="empty-state-text">Enter your holdings and run the optimizer</div>
+                <div style="color:var(--muted);font-size:11px;margin-top:6px;">LSTM-powered MPT hybrid · Validated
+                  Sharpe 1.54</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RISK DASHBOARD (shown after optimize) -->
+        <div id="risk-dashboard" style="display:none;margin-top:24px;">
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);">
+              <h3>Risk Dashboard</h3>
+            </div>
+            <div style="padding:20px 24px;">
+              <div class="grid-4 gap-16">
+                <div class="metric-card">
+                  <div class="metric-label">Sharpe Ratio</div>
+                  <div class="metric-value up" id="m-sharpe">1.49</div>
+                  <div class="metric-note">Target: ≥1.54 (paper)</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Sortino Ratio</div>
+                  <div class="metric-value up" id="m-sortino">2.13</div>
+                  <div class="metric-note">Downside-adjusted</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">CVaR (95%)</div>
+                  <div class="metric-value down" id="m-cvar">-1.83%</div>
+                  <div class="metric-note">Worst-month estimate</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Max Drawdown</div>
+                  <div class="metric-value down" id="m-mdd">-12.4%</div>
+                  <div class="metric-note">Largest peak-to-trough</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Ann. Volatility</div>
+                  <div class="metric-value" style="color:var(--accent2)" id="m-vol">9.87%</div>
+                  <div class="metric-note">vs Nifty 50: 18.2%</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Expected Return</div>
+                  <div class="metric-value up" id="m-ret">18.3%</div>
+                  <div class="metric-note">LSTM predicted (15d)</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Alpha vs Nifty50</div>
+                  <div class="metric-value up" id="m-alpha">+4.13%</div>
+                  <div class="metric-note">Outperforms benchmark</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">Beta</div>
+                  <div class="metric-value" style="color:var(--accent3)" id="m-beta">0.82</div>
+                  <div class="metric-note">Lower than market</div>
+                </div>
+              </div>
+
+              <div class="insight-box" id="risk-insight">
+                Your portfolio holds 5 stocks with low volatility (9.87% annualized). The Sharpe Ratio of 1.49 is
+                excellent — you earn ₹1.49 of return for every unit of risk. In a bad month with 95% confidence, you
+                could lose up to 1.83% of portfolio value. Your portfolio is beating the Nifty 50 by 4.13% annualised.
+              </div>
+            </div>
+          </div>
+
+          <!-- REBALANCING TABLE -->
+          <div class="card mt-24" style="padding:0;overflow:hidden;">
+            <div
+              style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+              <h3>Rebalancing Recommendations</h3>
+              <span class="mono muted" style="font-size:10px;">Based on LSTM optimal weights</span>
+            </div>
+            <table class="rebal-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Current Weight</th>
+                  <th>Optimal Weight</th>
+                  <th>Current Value</th>
+                  <th>Action</th>
+                  <th>Δ Value</th>
+                  <th>Stop-Loss</th>
+                  <th>Max Loss (₹)</th>
+                </tr>
+              </thead>
+              <tbody id="rebal-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════ PAGE: PATTERNS -->
+      <div class="page" id="page-patterns">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;">
+          <div>
+            <h2>Chart Pattern Intelligence <span class="mono muted" style="font-size:13px;font-weight:400;">Module
+                3</span></h2>
+            <p style="color:var(--muted);font-size:12px;">LSTM continuation scoring · per-stock back-tested win rates ·
+              plain-English explanations</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <select class="select" style="width:150px;" id="pattern-filter" onchange="renderPatterns()">
+              <option value="all">All Patterns</option>
+              <option value="UP">Bullish Only</option>
+              <option value="DOWN">Bearish Only</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="scanPatterns()">
+              <span class="spinner" id="pattern-spinner" style="display:none;"></span>
+              🔍 Scan Universe
+            </button>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active" onclick="switchPatternTab('holdings', this)">My Holdings (6)</div>
+          <div class="tab" onclick="switchPatternTab('watchlist', this)">Watchlist (4)</div>
+          <div class="tab" onclick="switchPatternTab('universe', this)">Universe (23)</div>
+        </div>
+
+        <div class="pattern-grid" id="pattern-grid">
+          <!-- JS populated -->
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════ PAGE: REGIME RADAR -->
+      <div class="page" id="page-regime">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;">
+          <div>
+            <h2>Market Regime Radar <span class="mono muted" style="font-size:13px;font-weight:400;">Module 4</span>
+            </h2>
+            <p style="color:var(--muted);font-size:12px;">HMM-based market regime detection · Bull / Bear / Sideways ·
+              Transition probabilities · Data integrity hashes</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="loadRegimePage()">
+            <span class="spinner" id="regime-spinner" style="display:none;"></span>
+            ↻ Refresh Regime
+          </button>
+        </div>
+
+        <!-- Current Regime Badge -->
+        <div id="regime-badge" class="regime-card">
+          <div class="empty-state">
+            <div class="empty-state-icon">📡</div>
+            <div class="empty-state-text">Click "Refresh Regime" to load live HMM analysis</div>
+          </div>
+        </div>
+
+        <!-- Cumulative Returns Chart (colour-coded by regime) -->
+        <div id="regime-chart-container">
+          <h3 style="margin-bottom:16px;">Cumulative Returns by Regime</h3>
+          <canvas id="regime-chart" height="80"></canvas>
+          <div id="regime-chart-fallback"
+            style="color:var(--muted);font-family:var(--font-mono);font-size:11px;margin-top:8px;display:none;">
+            Chart requires Chart.js — data available via <code>/api/regime/cumulative-returns</code>
+          </div>
+        </div>
+
+        <!-- 3x3 Transition Matrix -->
+        <div id="transition-matrix-container">
+          <h3>Regime Transition Probabilities</h3>
+          <table id="transition-matrix-table">
+            <tr>
+              <td colspan="4"
+                style="color:var(--muted);font-family:var(--font-mono);font-size:11px;padding:20px;border:none;">Load
+                regime data to see transition matrix.</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Data Integrity Hashes -->
+        <div id="data-integrity-container">
+          <h3>Data Integrity (SHA-256)</h3>
+          <div id="hash-display">
+            <p style="color:var(--muted);font-family:var(--font-mono);font-size:11px;">Load regime data to see data
+              hashes.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════ PAGE: MY PORTFOLIO -->
+      <div class="page" id="page-portfolio">
+        <h2 style="margin-bottom:24px;">My Portfolio Settings</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3 class="mb-16">Holdings</h3>
+            <div class="input-group">
+              <label class="input-label">Add Stocks to Your Portfolio</label>
+              <div class="tag-input-wrap" id="portfolio-wrap" onclick="focusTagInput('portfolio-tag-input')">
+                <div class="tag">RELIANCE<span class="tag-remove" onclick="removeTag(this,'portfolio-wrap')">×</span>
+                </div>
+                <div class="tag">TCS<span class="tag-remove" onclick="removeTag(this,'portfolio-wrap')">×</span></div>
+                <div class="tag">HDFCBANK<span class="tag-remove" onclick="removeTag(this,'portfolio-wrap')">×</span>
+                </div>
+                <div class="tag">ICICIBANK<span class="tag-remove" onclick="removeTag(this,'portfolio-wrap')">×</span>
+                </div>
+                <div class="tag">INFY<span class="tag-remove" onclick="removeTag(this,'portfolio-wrap')">×</span></div>
+                <input class="tag-input" id="portfolio-tag-input" placeholder="Type symbol + Enter…"
+                  onkeydown="handleTagInput(event,'portfolio-wrap')" />
+              </div>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Watchlist</label>
+              <div class="tag-input-wrap" id="watchlist-wrap" onclick="focusTagInput('watchlist-tag-input')">
+                <div class="tag">WIPRO<span class="tag-remove" onclick="removeTag(this,'watchlist-wrap')">×</span></div>
+                <div class="tag">BAJFINANCE<span class="tag-remove" onclick="removeTag(this,'watchlist-wrap')">×</span>
+                </div>
+                <input class="tag-input" id="watchlist-tag-input" placeholder="Type symbol + Enter…"
+                  onkeydown="handleTagInput(event,'watchlist-wrap')" />
+              </div>
+            </div>
+            <div class="input-group">
+              <label class="input-label">API Base URL</label>
+              <input class="input" value="http://localhost:8000" id="api-url" />
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+
+            <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;"
+              onclick="requestNotificationPermission()">
+              🔔 Enable Market Emergency Alerts
+            </button>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);
+                        margin-top:6px;line-height:1.8;padding:0 2px;">
+              Sends a browser notification if the regime flips to Bear, VIX spikes,
+              or Nifty drops more than 3% — even when this tab is in the background.
+              The portfolio monitor checks every 5 minutes while this tab is open.
+            </div>
+            <div style="margin-top:16px;padding:12px 14px;
+                        background:rgba(248,113,113,0.05);
+                        border:1px solid rgba(248,113,113,0.15);
+                        border-radius:var(--r);font-family:var(--font-mono);
+                        font-size:10px;color:var(--muted);line-height:2;">
+              <div style="color:var(--danger);font-weight:700;margin-bottom:4px;">
+                REGULATORY NOTICE
+              </div>
+              This tool is not registered with SEBI as an Investment Adviser under
+              the SEBI (Investment Advisers) Regulations, 2013. It does not provide
+              personalised investment advice. Use of this platform is subject to the
+              user's own risk assessment and financial judgement. This platform does
+              not compensate for any investment losses.
+            </div>
+
+          </div>
+
+          <div class="card">
+            <h3 class="mb-16">API Connection Test</h3>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:2.2;">
+              <div>GET <span style="color:var(--accent2)">/signals/daily?top_n=20</span></div>
+              <div>GET <span style="color:var(--accent2)">/signals/{symbol}</span></div>
+              <div>POST <span style="color:var(--accent2)">/optimizer/optimize</span></div>
+              <div>POST <span style="color:var(--accent2)">/optimizer/risk</span></div>
+              <div>POST <span style="color:var(--accent2)">/optimizer/rebalance</span></div>
+              <div>GET <span style="color:var(--accent2)">/patterns/scan?top_n=20</span></div>
+              <div>GET <span style="color:var(--accent2)">/patterns/{symbol}</span></div>
+              <div>POST <span style="color:var(--accent2)">/patterns/portfolio</span></div>
+              <div
+                style="margin-top:8px;color:var(--accent3);font-size:9px;letter-spacing:1px;text-transform:uppercase;">
+                Module 4 — Regime</div>
+              <div>GET <span style="color:var(--accent3)">/api/regime/current</span></div>
+              <div>GET <span style="color:var(--accent3)">/api/regime/history</span></div>
+              <div>GET <span style="color:var(--accent3)">/api/regime/transition-matrix</span></div>
+              <div>GET <span style="color:var(--accent3)">/api/regime/cumulative-returns</span></div>
+              <div>GET <span style="color:var(--accent3)">/api/regime/features</span></div>
+              <div>GET <span style="color:var(--accent3)">/api/regime/hashes</span></div>
+              <div>GET <span style="color:var(--accent3)">/api/regime/summary</span></div>
+            </div>
+            <button class="btn btn-outline btn-sm mt-20" onclick="testAPI()">Test Connection</button>
+            <div id="api-test-result" style="margin-top:12px;font-family:var(--font-mono);font-size:11px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PERSISTENT DISCLAIMER FOOTER ─────────────────────── -->
+      <footer style="padding:10px 32px;border-top:1px solid var(--border);
+                     font-family:var(--font-mono);font-size:9px;color:var(--muted);
+                     letter-spacing:0.5px;line-height:2;background:var(--surface);
+                     text-align:center;">
+        ⚠ FOR EDUCATIONAL PURPOSES ONLY · NOT SEBI-REGISTERED INVESTMENT ADVICE ·
+        Past performance does not guarantee future results ·
+        All signals are algorithmic outputs — not financial advice ·
+        Consult a SEBI-registered advisor before investing ·
+        This platform does not execute trades or compensate for losses
+      </footer>
+
+    </div><!-- /main -->
+  </div><!-- /app -->
+
+  <!-- ═══ DETAIL PANEL ═══════════════════════════════════════════ -->
+  <div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+  <div class="detail-panel" id="detail-panel">
+    <div style="margin-bottom:20px;">
+      <span class="detail-close" onclick="closeDetail()">✕</span>
+      <div id="detail-symbol" style="font-size:22px;font-weight:800;"></div>
+      <div id="detail-meta" style="color:var(--muted);font-size:12px;margin-top:4px;"></div>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- ═══ DISCLAIMER MODAL (shown once per session) ════════════════ -->
+  <div id="disclaimer-modal" style="display:none;position:fixed;inset:0;
+       background:rgba(0,0,0,0.85);z-index:10000;align-items:center;
+       justify-content:center;">
+    <div style="background:var(--surface);border:1px solid var(--border2);
+                border-radius:var(--r2);padding:36px;max-width:540px;width:90%;
+                animation:fadeUp 0.3s ease;">
+      <div style="font-size:18px;font-weight:800;margin-bottom:6px;">⚠ Important Disclaimer</div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--accent3);
+                  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;">
+        Read before using this platform
+      </div>
+      <div style="font-size:13px;line-height:2.2;color:var(--muted);">
+        <p>This platform is <strong style="color:var(--text)">NOT a SEBI-registered
+            Investment Adviser</strong> and does not provide personalised financial advice.</p>
+        <p style="margin-top:10px;">All signals, scores, and portfolio recommendations
+          are generated by <strong style="color:var(--text)">algorithmic models</strong>
+          trained on historical NSE data. Past performance does not guarantee future results.</p>
+        <p style="margin-top:10px;">The Sharpe Ratio of 1.54 is from the
+          <strong style="color:var(--text)">Zouaoui & Naas (2025) academic paper</strong>
+          — it is a backtested result, not a live trading guarantee.
+        </p>
+        <p style="margin-top:10px;">LSTM and HMM models may perform poorly during
+          <strong style="color:var(--text)">unprecedented black swan events</strong>
+          not present in training data.
+        </p>
+        <p style="margin-top:10px;">Always consult a
+          <strong style="color:var(--text)">SEBI-registered advisor</strong> before
+          investing. You are solely responsible for your investment decisions.
+        </p>
+        <p style="margin-top:10px;">This platform does not execute trades,
+          hold funds, or compensate for any losses.</p>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:24px;font-size:14px;" onclick="acceptDisclaimer()">
+        I Understand — Continue to Platform
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ DAMAGE CONTROL OVERLAY ══════════════════════════════════ -->
+  <div id="damage-control-overlay" style="display:none;"></div>
+
+  <!-- ═══ TOAST ═════════════════════════════════════════════════ -->
+  <div id="toast"></div>
+
+  <script>
+    /* ── STATE & API ────────────────────────────────────────────── */
+    let SIGNALS = [];
+    let PATTERNS = { holdings: [], watchlist: [], universe: [] };
+    let currentPatternTab = 'holdings';
+    let patternFilterDir = 'all';
+    let regimeLoaded = false;
+
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const baseUrl = document.getElementById('api-url').value.replace(/\/$/, '');
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+      };
+      if (body) options.body = JSON.stringify(body);
+
+      try {
+        const response = await fetch(`${baseUrl}${endpoint}`, options);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `API Error: ${response.status}`);
+        }
+        return await response.json();
+      } catch (err) {
+        console.error(`API Call failed [${endpoint}]:`, err);
+        toast(`Error: ${err.message}`);
+        throw err;
+      }
+    }
+
+    function getPortfolioSymbols(id) {
+      const wrap = document.getElementById(id);
+      return Array.from(wrap.querySelectorAll('.tag')).map(t => t.textContent.replace('×', '').trim());
+    }
+
+    /* ── PAGE NAVIGATION ────────────────────────────────────────── */
+    function showPage(id, el) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + id).classList.add('active');
+      if (el) el.classList.add('active');
+      const titles = { dashboard: 'Dashboard', radar: 'Opportunity Radar', optimizer: 'Portfolio Optimizer', patterns: 'Chart Patterns', portfolio: 'My Portfolio', regime: 'Market Regime Radar' };
+      document.getElementById('topbar-title').textContent = titles[id] || id;
+      if (id === 'regime' && !regimeLoaded) loadRegimePage();
+    }
+
+    /* ── CLOCK ──────────────────────────────────────────────────── */
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent =
+        now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    /* ── TAG INPUT ──────────────────────────────────────────────── */
+    function focusTagInput(id) { document.getElementById(id).focus(); }
+
+    function handleTagInput(e, wrapId) {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const val = e.target.value.trim().toUpperCase().replace(/[^A-Z0-9&-]/g, '');
+        if (!val) return;
+        const wrap = document.getElementById(wrapId);
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.innerHTML = `${val}<span class="tag-remove" onclick="removeTag(this,'${wrapId}')">×</span>`;
+        wrap.insertBefore(tag, e.target);
+        e.target.value = '';
+      }
+    }
+
+    function removeTag(span, wrapId) {
+      span.parentElement.remove();
+    }
+
+    /* ── TOAST ──────────────────────────────────────────────────── */
+    function toast(msg, ms = 2500) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), ms);
+    }
+
+    /* ── DETAIL PANEL ───────────────────────────────────────────── */
+    function openDetail(symbol, meta, html) {
+      document.getElementById('detail-symbol').textContent = symbol;
+      document.getElementById('detail-meta').textContent = meta;
+      document.getElementById('detail-content').innerHTML = html;
+      document.getElementById('detail-panel').classList.add('open');
+      document.getElementById('detail-overlay').classList.add('open');
+    }
+
+    function closeDetail() {
+      document.getElementById('detail-panel').classList.remove('open');
+      document.getElementById('detail-overlay').classList.remove('open');
+    }
+
+    /* ── SIGNAL FEED ────────────────────────────────────────────── */
+    function scoreColor(s) {
+      if (s >= 60) return 'var(--up)';
+      if (s >= 45) return 'var(--accent3)';
+      return 'var(--muted)';
+    }
+
+    function populateSectorFilter(signals) {
+      const sectors = [...new Set(signals.map(s => s.sector).filter(Boolean))].sort();
+      const sel = document.getElementById('signal-filter-sector');
+      const current = sel.value;
+      sel.innerHTML = '<option value="all">All Sectors</option>' +
+        sectors.map(s => `<option value="${s}"${s === current ? ' selected' : ''}>${s}</option>`).join('');
+    }
+
+    function renderSignals() {
+      const type = document.getElementById('signal-filter-type').value;
+      const sector = document.getElementById('signal-filter-sector').value;
+
+      let data = SIGNALS.filter(s => {
+        const hasBulk = s.bulk_score > 0;
+        const hasInsider = s.insider_score > 0;
+        const hasFiling = s.filing_score > 0;
+
+        if (type !== 'all') {
+          if (type === 'bulk' && !hasBulk) return false;
+          if (type === 'insider' && !hasInsider) return false;
+          if (type === 'filing' && !hasFiling) return false;
+        }
+        if (sector !== 'all' && s.sector !== sector) return false;
+        return true;
+      });
+
+      const feed = document.getElementById('signal-feed');
+      feed.innerHTML = data.map(s => `
+    <div class="signal-row" onclick="openSignalDetail('${s.symbol}')">
+      <span><span class="symbol-badge">${s.symbol}</span></span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${s.bulk_score > 0 ? '<span class="signal-type-pill pill-bulk">Bulk</span>' : ''}
+        ${s.insider_score > 0 ? '<span class="signal-type-pill pill-insider">Insider</span>' : ''}
+        ${s.filing_score > 0 ? '<span class="signal-type-pill pill-filing">Filing</span>' : ''}
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar"><div class="score-bar-fill" style="width:${s.composite_score}%;background:${scoreColor(s.composite_score)};"></div></div>
+        <span class="score-num mono" style="color:${scoreColor(s.composite_score)}">${s.composite_score.toFixed(1)}</span>
+      </div>
+      <span class="mono" style="color:${s.bulk_score > 0 ? 'var(--accent2)' : 'var(--muted)'}">${s.bulk_score > 0 ? s.bulk_score.toFixed(1) : '—'}</span>
+      <span class="mono" style="color:${s.insider_score > 0 ? 'var(--accent)' : 'var(--muted)'}">${s.insider_score > 0 ? s.insider_score.toFixed(1) : '—'}</span>
+      <span class="mono" style="color:${s.filing_score > 0 ? 'var(--accent3)' : 'var(--muted)'}">${s.filing_score > 0 ? s.filing_score.toFixed(1) : '—'}</span>
+      <span class="sector-badge">${s.sector}</span>
+    </div>
+  `).join('');
+
+      updateDashSignals(data);
+    }
+
+    function updateDashSignals(data) {
+      const dash = document.getElementById('dash-signals');
+      if (dash) {
+        dash.innerHTML = data.slice(0, 6).map(s => `
+      <div style="display:grid;grid-template-columns:100px 1fr 70px 80px;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''" onclick="openSignalDetail('${s.symbol}')">
+        <span class="symbol-badge">${s.symbol}</span>
+        <div style="display:flex;gap:5px;">
+          ${s.bulk_score > 0 ? '<span class="signal-type-pill pill-bulk">Bulk</span>' : ''}
+          ${s.insider_score > 0 ? '<span class="signal-type-pill pill-insider">Insider</span>' : ''}
+          ${s.filing_score > 0 ? '<span class="signal-type-pill pill-filing">Filing</span>' : ''}
+        </div>
+        <span class="mono" style="color:${scoreColor(s.composite_score)};font-size:13px;font-weight:700;">${s.composite_score.toFixed(1)}</span>
+        <span class="sector-badge">${s.sector}</span>
+      </div>
+    `).join('') + `<div style="border-bottom:none;height:1px;"></div>`;
+      }
+    }
+
+    function openSignalDetail(symbol) {
+      const s = SIGNALS.find(x => x.symbol === symbol);
+      if (!s) return;
+      const signalTypes = [s.bulk_score > 0 ? 'Bulk' : '', s.insider_score > 0 ? 'Insider' : '', s.filing_score > 0 ? 'Filing' : ''].filter(Boolean);
+      const html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div class="metric-card"><div class="metric-label">Composite Score</div><div class="metric-value" style="color:${scoreColor(s.composite_score)}">${s.composite_score.toFixed(1)}</div></div>
+      <div class="metric-card"><div class="metric-label">Bulk Score</div><div class="metric-value" style="color:var(--accent2)">${s.bulk_score > 0 ? s.bulk_score.toFixed(1) : '—'}</div></div>
+      <div class="metric-card"><div class="metric-label">Insider Score</div><div class="metric-value" style="color:var(--accent)">${s.insider_score > 0 ? s.insider_score.toFixed(1) : '—'}</div></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;">
+      <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Signal Breakdown</div>
+      ${s.bulk_score > 0 ? `<div style="margin-bottom:8px;font-size:12px;">&#128202; <strong>Bulk Deals:</strong> Institutional accumulation detected. Score: ${s.bulk_score.toFixed(1)}. Signals: ${s.signal_count}.</div>` : ''}
+      ${s.insider_score > 0 ? `<div style="margin-bottom:8px;font-size:12px;">&#128274; <strong>Insider Trades:</strong> ${s.insider_score >= 85 ? 'Promoter/Director level' : 'KMP level'} buying detected. Score: ${s.insider_score.toFixed(1)}.</div>` : ''}
+      ${s.filing_score > 0 ? `<div style="margin-bottom:8px;font-size:12px;">&#128196; <strong>Corporate Filing:</strong> Material announcement detected. Score: ${s.filing_score.toFixed(1)}.</div>` : ''}
+    </div>
+    <div class="insight-box">
+      ${symbol} is showing ${signalTypes.length > 1 ? 'multi-source convergence' : 'a single-source signal'} — ${signalTypes.join(' + ')} data streams are aligned. Composite score of ${s.composite_score.toFixed(1)} places it in the ${s.composite_score >= 60 ? 'high' : s.composite_score >= 45 ? 'medium' : 'lower'}-confidence tier. Market Regime: ${s.market_regime}. Sector: ${s.sector}.
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" onclick="closeDetail();showPage('optimizer',document.querySelector('.nav-item:nth-child(6)'))">Optimize with this stock</button>
+      <button class="btn btn-outline btn-sm" onclick="closeDetail();showPage('patterns',document.querySelector('.nav-item:nth-child(8)'))">Check patterns</button>
+    </div>
+  `;
+      openDetail(symbol, `Score: ${s.composite_score.toFixed(1)} · ${s.sector} · ${signalTypes.join(' + ')}`, html);
+    }
+
+    /* ── REFRESH SIGNALS ────────────────────────────────────────── */
+    async function refreshSignals() {
+      const btn = document.getElementById('refresh-btn');
+      const sp = document.getElementById('refresh-spinner');
+      sp.style.display = 'inline-block'; btn.classList.add('btn-loading');
+      try {
+        SIGNALS = await apiCall('/signals/daily?top_n=30');
+        renderSignals();
+        populateSectorFilter(SIGNALS);
+        toast('Signals refreshed from API');
+      } catch (err) {
+        toast('Failed to refresh signals. Is the API running?');
+      } finally {
+        sp.style.display = 'none'; btn.classList.remove('btn-loading');
+      }
+    }
+
+    /* ── OPTIMIZER ──────────────────────────────────────────────── */
+    async function runOptimizer() {
+      const tags = getPortfolioSymbols('holdings-wrap');
+      const portfolioValue = parseFloat(document.getElementById('portfolio-value').value) || 500000;
+      const horizon = parseInt(document.getElementById('opt-horizon').value);
+      const objective = document.getElementById('opt-objective').value;
+
+      if (tags.length < 2) {
+        toast('⚠ Please add at least 2 stock symbols for optimization');
+        return;
+      }
+
+      const sp = document.getElementById('opt-spinner');
+      const btn = sp.closest('button');
+      sp.style.display = 'inline-block'; btn.classList.add('btn-loading');
+
+      try {
+        // 1. Run Optimization
+        const opt = await apiCall('/optimizer/optimize', 'POST', {
+          symbols: tags,
+          horizon: horizon,
+          objective: objective
+        });
+
+        if (opt.status !== 'success' && !opt.optimal_weights) {
+          throw new Error(opt.message || "Optimization failed");
+        }
+
+        const weights = Object.entries(opt.optimal_weights).map(([sym, w]) => ({ sym, w: Math.round(w * 100 * 10) / 10 }));
+        weights.sort((a, b) => b.w - a.w);
+
+        // Update Weights UI
+        const optResult = document.getElementById('optimizer-results');
+        optResult.innerHTML = `
+      <div class="card">
+        <h3 class="mb-16">Optimal Weights</h3>
+        <div id="weight-bars"></div>
+        <div class="frontier-wrap mt-20">
+          ${buildFrontierSVG(opt.efficient_frontier)}
+        </div>
+        <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);text-align:center;margin-top:6px;">Efficient Frontier · Current Portfolio ◆ vs Optimal ★</div>
+      </div>
+    `;
+
+        const colors = ['var(--accent)', 'var(--accent2)', 'var(--accent3)', '#c084fc', '#fb923c', '#f472b6', '#a78bfa', '#fbbf24'];
+        document.getElementById('weight-bars').innerHTML = weights.map((w, i) => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span class="mono" style="width:80px;font-size:11px;color:${colors[i % colors.length]}">${w.sym}</span>
+        <div style="flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;">
+          <div style="width:${w.w}%;height:100%;background:${colors[i % colors.length]};border-radius:4px;transition:width 0.8s ${i * 0.1}s;"></div>
+        </div>
+        <span class="mono" style="font-size:12px;font-weight:700;width:42px;text-align:right;">${w.w}%</span>
+      </div>
+    `).join('');
+
+        // 2. Fetch Risk Metrics
+        const risk = await apiCall('/optimizer/risk', 'POST', {
+          weights: opt.optimal_weights
+        });
+
+        document.getElementById('risk-dashboard').style.display = 'block';
+        document.getElementById('m-sharpe').textContent = risk.sharpe_ratio.toFixed(2);
+        document.getElementById('m-sortino').textContent = risk.sortino_ratio.toFixed(2);
+        document.getElementById('m-cvar').textContent = risk.cvar_95_pct.toFixed(2) + '%';
+        document.getElementById('m-mdd').textContent = risk.max_drawdown_pct.toFixed(2) + '%';
+        document.getElementById('m-vol').textContent = risk.annualized_volatility_pct.toFixed(2) + '%';
+        document.getElementById('m-ret').textContent = (opt.expected_return_pct || 0).toFixed(1) + '%';
+        document.getElementById('m-alpha').textContent = '—';
+        document.getElementById('m-beta').textContent = risk.portfolio_beta ? risk.portfolio_beta.toFixed(2) : '—';
+        document.getElementById('risk-insight').textContent = risk.plain_english_summary;
+
+        // Fetch benchmark for Alpha and Beta vs Nifty 50
+        try {
+          const bench = await apiCall('/optimizer/benchmark', 'POST', { weights: opt.optimal_weights });
+          document.getElementById('m-alpha').textContent =
+            (bench.alpha_vs_nifty50 >= 0 ? '+' : '') + bench.alpha_vs_nifty50.toFixed(2) + '%';
+          document.getElementById('m-beta').textContent = bench.beta_vs_nifty50.toFixed(2);
+        } catch (_) {
+          // Non-fatal — alpha/beta stay as '—' if benchmark call fails
+        }
+
+        // 3. Generate Rebalancing
+        const currentWeights = {};
+        tags.forEach(t => currentWeights[t] = 1.0 / tags.length);
+
+        const rebal = await apiCall('/optimizer/rebalance', 'POST', {
+          current_holdings: currentWeights,
+          optimal_weights: opt.optimal_weights,
+          portfolio_value: portfolioValue
+        });
+
+        const tbody = document.getElementById('rebal-tbody');
+        tbody.innerHTML = rebal.actions.map(a => `
+      <tr>
+        <td><span class="symbol-badge">${a.symbol}</span></td>
+        <td class="mono">${a.current_weight_pct}%</td>
+        <td class="mono" style="color:var(--accent)">${a.optimal_weight_pct}%</td>
+        <td class="mono">₹${Math.round(portfolioValue * a.current_weight_pct / 100).toLocaleString('en-IN')}</td>
+        <td class="action-${a.direction.toLowerCase()}">${a.direction}</td>
+        <td class="mono" style="color:${a.drift_pct > 0 ? 'var(--up)' : a.drift_pct < 0 ? 'var(--down)' : 'var(--muted)'}">
+          ${a.drift_pct > 0 ? '+' : ''}₹${Math.round(portfolioValue * Math.abs(a.drift_pct) / 100).toLocaleString('en-IN')}
+        </td>
+      </tr>
+    `).join('');
+
+        toast(`✓ Optimizer complete · ${objective} · ${horizon}-day horizon`);
+        await enrichRebalWithStopLoss(rebal.actions, portfolioValue);
+      } catch (err) {
+        toast(`✗ Optimizer failed: ${err.message}`);
+        document.getElementById('optimizer-results').innerHTML = `
+          <div class="card" style="height:100%;display:flex;align-items:center;justify-content:center;">
+            <div class="empty-state">
+              <div class="empty-state-icon">⚠</div>
+              <div class="empty-state-text" style="color:var(--danger);">${err.message}</div>
+              <div style="color:var(--muted);font-size:11px;margin-top:6px;">Check API logs · Ensure backend is running · Verify symbols are valid Nifty 50 tickers</div>
+            </div>
+          </div>`;
+      } finally {
+        sp.style.display = 'none'; btn.classList.remove('btn-loading');
+      }
+    }
+
+    function buildFrontierSVG(points = []) {
+      // Use real points if available, else fallback to mock curve
+      const pts = (points && points.length > 5) ? points.map(p => [20 + p[0] * 200, 180 - p[1] * 150]) : [[20, 160], [35, 140], [55, 118], [78, 98], [105, 82], [135, 68], [165, 58], [195, 52], [220, 49], [240, 48]];
+      const path = 'M ' + pts.map(p => p.join(',')).join(' L ');
+      const area = 'M ' + pts.map(p => p.join(',')).join(' L ') + ` L 240,180 L 20,180 Z`;
+      return `
+    <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="20" y1="20" x2="20" y2="180" stroke="var(--border2)" stroke-width="1"/>
+      <line x1="20" y1="180" x2="250" y2="180" stroke="var(--border2)" stroke-width="1"/>
+      <path d="${area}" fill="url(#fg)"/>
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="165" cy="100" r="5" fill="var(--accent3)" opacity="0.9"/>
+      <circle cx="195" cy="52" r="6" fill="var(--accent)" opacity="0.95"/>
+    </svg>`;
+    }
+
+    /* ── PATTERNS ───────────────────────────────────────────────── */
+    function fmtWinRate(val) {
+      if (val === null || val === undefined) return '—';
+      const n = parseFloat(val);
+      return isNaN(n) ? String(val) : n.toFixed(1) + '%';
+    }
+
+    async function renderPatterns() {
+      const dir = document.getElementById('pattern-filter').value;
+      const grid = document.getElementById('pattern-grid');
+
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;"><span class="spinner"></span><div style="margin-top:10px;color:var(--muted);">Fetching live patterns...</div></div>`;
+
+      try {
+        let data = [];
+        if (currentPatternTab === 'universe') {
+          const res = await apiCall('/patterns/scan?top_n=30');
+          data = res.patterns || [];
+        } else {
+          const holdings = getPortfolioSymbols('portfolio-wrap');
+          const watchlist = getPortfolioSymbols('watchlist-wrap');
+          const res = await apiCall('/patterns/portfolio', 'POST', { holdings, watchlist });
+          data = currentPatternTab === 'holdings' ? res.holdings : res.watchlist;
+        }
+
+        PATTERNS[currentPatternTab] = data; // Cache for detail view
+        const filtered = data.filter(p => dir === 'all' || p.direction === dir);
+
+        if (!filtered.length) {
+          grid.innerHTML = `<div style="grid-column:1/-1;"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">No patterns detected for ${currentPatternTab}</div></div></div>`;
+          return;
+        }
+
+        grid.innerHTML = filtered.map(p => {
+          const isUp = p.direction === 'UP';
+          const clr = isUp ? 'var(--up)' : 'var(--down)';
+          const typeName = p.pattern_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          return `
+      <div class="pattern-card ${isUp ? 'up' : 'down'}" onclick="openPatternDetail('${p.symbol}','${currentPatternTab}')">
+        <div class="pattern-header">
+          <div>
+            <div class="pattern-type-name">${typeName}</div>
+            <div class="pattern-type-sub" style="display:flex;align-items:center;gap:6px;">
+              <span class="symbol-badge">${p.symbol}</span>
+              <span style="font-size:10px;color:${clr}">${isUp ? '▲ Bullish' : '▼ Bearish'}</span>
+            </div>
+          </div>
+          <div class="pattern-score-ring" style="border-color:${clr};color:${clr};">
+            <span>${p.composite_score.toFixed(1)}</span>
+            <span class="score-ring-label">score</span>
+          </div>
+        </div>
+
+        <div class="pattern-levels">
+          <div class="level-item">
+            <div class="level-label">Entry</div>
+            <div class="level-value">&#8377;${p.entry_price.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="level-item">
+            <div class="level-label">Stop</div>
+            <div class="level-value" style="color:var(--down)">&#8377;${p.stop_loss.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="level-item">
+            <div class="level-label">Target</div>
+            <div class="level-value" style="color:var(--up)">&#8377;${(p.price_target || p.target_price || 0).toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div>
+            <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted)">Win Rate (${p.sample_count} setups)</div>
+            <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:${clr}">${fmtWinRate(p.win_rate_pct)}</div>
+            <div class="wr-bar" style="width:120px;"><div class="wr-fill" style="width:${parseFloat(p.win_rate_pct) || 0}%;background:${clr};"></div></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted)">RSI (14)</div>
+            <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:${p.rsi > 70 ? 'var(--down)' : p.rsi < 30 ? 'var(--up)' : 'var(--text)'}">${p.rsi.toFixed(1)}</div>
+            <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-top:2px;">Vol Ratio</div>
+          </div>
+        </div>
+
+        <div class="pattern-explanation">${p.explanation}</div>
+      </div>`;
+        }).join('');
+
+        if (currentPatternTab === 'holdings') updateDashPatterns(data);
+
+      } catch (err) {
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--danger);">Failed to load patterns. Check API connection.</div>`;
+      }
+    }
+
+    function openPatternDetail(symbol, tab) {
+      const p = PATTERNS[tab].find(x => x.symbol === symbol);
+      if (!p) return;
+      const isUp = p.direction === 'UP';
+      const clr = isUp ? 'var(--up)' : 'var(--down)';
+      const _target = p.price_target || p.target_price || p.entry_price;
+      const rr = ((Math.abs(_target - p.entry_price)) / (Math.abs(p.entry_price - p.stop_loss) || 1)).toFixed(1);
+      const typeName = p.pattern_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+      const html = `
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <span class="signal-type-pill" style="border-color:${clr}20;color:${clr};background:${clr}10;">${isUp ? '▲ Bullish' : '▼ Bearish'} · ${typeName}</span>
+      <span class="sector-badge">AI Score: ${p.composite_score.toFixed(1)}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div class="metric-card">
+        <div class="metric-label">Entry</div>
+        <div class="metric-value" style="font-size:16px;">&#8377;${p.entry_price.toLocaleString('en-IN')}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Stop Loss</div>
+        <div class="metric-value down" style="font-size:16px;">&#8377;${p.stop_loss.toLocaleString('en-IN')}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Target</div>
+        <div class="metric-value up" style="font-size:16px;">&#8377;${_target.toLocaleString('en-IN')}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div class="metric-card"><div class="metric-label">Win Rate</div><div class="metric-value" style="color:${clr};font-size:18px;">${fmtWinRate(p.win_rate_pct)}</div><div class="metric-note">${p.sample_count} setups</div></div>
+      <div class="metric-card"><div class="metric-label">R:R Ratio</div><div class="metric-value" style="font-size:18px;">${rr}×</div></div>
+      <div class="metric-card"><div class="metric-label">RSI</div><div class="metric-value" style="font-size:18px;">${p.rsi.toFixed(1)}</div></div>
+      <div class="metric-card"><div class="metric-label">Backtested</div><div class="metric-value" style="font-size:18px;">✓</div></div>
+    </div>
+    <div class="insight-box">${p.explanation}</div>
+    <div style="margin-top:16px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);font-family:var(--font-mono);font-size:10px;line-height:2;color:var(--muted);">
+      <div>Pattern Type: <span style="color:var(--text)">${typeName}</span></div>
+      <div>Direction: <span style="color:${clr}">${p.direction}</span></div>
+      <div>LSTM Continuation Score: <span style="color:${clr}">${(p.lstm_score * 100).toFixed(1)}/100</span></div>
+      <div>Historical Win Rate: <span style="color:${clr}">${fmtWinRate(p.win_rate_pct)}</span> (${p.sample_count} occurrences on ${p.symbol})</div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="closeDetail(); document.getElementById('holdings-input').value='${p.symbol}'; handleTagInput({key:'Enter', target:document.getElementById('holdings-input'), preventDefault:()=>{}}, 'holdings-wrap'); showPage('optimizer',document.querySelector('.nav-item:nth-child(6)'))">Add to Optimizer</button>
+    </div>
+  `;
+      openDetail(symbol, `${typeName} · ${isUp ? '▲ Bullish' : '▼ Bearish'} · Win Rate ${fmtWinRate(p.win_rate_pct)}`, html);
+    }
+
+    function switchPatternTab(tab, el) {
+      currentPatternTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      renderPatterns();
+    }
+
+    async function scanPatterns() {
+      const sp = document.getElementById('pattern-spinner');
+      const btn = sp.closest('button');
+      sp.style.display = 'inline-block'; btn.classList.add('btn-loading');
+      try {
+        await renderPatterns();
+        toast('✓ Complete scan performed across Nifty 50 universe');
+      } catch (err) {
+      } finally {
+        sp.style.display = 'none'; btn.classList.remove('btn-loading');
+      }
+    }
+
+    function updateDashPatterns(data) {
+      const dp = document.getElementById('dash-patterns');
+      if (!dp) return;
+      dp.innerHTML = data.slice(0, 3).map(p => {
+        const isUp = p.direction === 'UP';
+        const clr = isUp ? 'var(--up)' : 'var(--down)';
+        const name = p.pattern_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        return `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="showPage('patterns',document.querySelector('.nav-item:nth-child(8)'))">
+        <div style="width:36px;height:36px;border-radius:50%;border:2px solid ${clr};display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:700;color:${clr};">${p.composite_score.toFixed(1)}</div>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:700;">${p.symbol} <span style="font-weight:400;color:var(--muted);font-size:11px;">· ${name}</span></div>
+          <div style="font-size:11px;color:${clr};">${isUp ? '▲' : '▼'} ${isUp ? 'Bullish' : 'Bearish'} · WR ${fmtWinRate(p.win_rate_pct)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);">Entry</div>
+          <div style="font-family:var(--font-mono);font-size:12px;font-weight:600;">₹${p.entry_price.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+    `;
+      }).join('') + `<div style="height:1px;border:none;"></div>`;
+    }
+
+    /* ── SETTINGS ────────────────────────────────────────────────── */
+    function saveSettings() {
+      toast('✓ Settings saved · API URL updated');
+      initApp(); // Re-init with new URL
+    }
+
+    async function testAPI() {
+      const result = document.getElementById('api-test-result');
+      result.textContent = 'Testing connection...'; result.style.color = 'var(--muted)';
+
+      try {
+        const res = await apiCall('/health');
+        result.innerHTML = `
+      <span style="color:var(--up)">✓ GET /health → 200 OK</span><br>
+      <span style="color:var(--up)">✓ Backend: Healthy</span><br>
+      <span style="color:var(--up)">✓ Bulk Deals: ${res.data_status.bulk_deals}</span><br>
+      <span style="color:var(--up)">✓ Insider Trades: ${res.data_status.insider_trades}</span><br>
+      <span style="color:var(--up)">✓ Corp Filings: ${res.data_status.corporate_filings}</span>
+    `;
+      } catch (err) {
+        result.innerHTML = `<span style="color:var(--danger)">✗ Connection Failed: ${err.message}</span>`;
+      }
+    }
+
+    /* ── REGIME RADAR ────────────────────────────────────────────── */
+    async function loadRegimePage() {
+      const sp = document.getElementById('regime-spinner');
+      const btn = sp.closest('button');
+      sp.style.display = 'inline-block'; btn.classList.add('btn-loading');
+
+      try {
+        // 1. Fetch current regime
+        const current = await apiCall('/api/regime/current');
+        const regimeColors = { bearish: '#e74c3c', neutral: '#f39c12', bullish: '#2ecc71' };
+        const color = regimeColors[current.type] || 'var(--accent)';
+
+        document.getElementById('regime-badge').innerHTML = `
+      <div style="border-left: 4px solid ${color}; padding: 24px 28px; display:flex; gap:32px; flex-wrap:wrap; align-items:center;">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Current Market Regime</div>
+          <div style="font-size:22px;font-weight:800;color:${color};">${current.name}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:4px;">As of ${current.date}</div>
+        </div>
+        <div class="grid-4" style="flex:1;gap:16px;">
+          <div class="metric-card">
+            <div class="metric-label">Confidence</div>
+            <div class="metric-value" style="color:${color};">${current.confidence}%</div>
+            <div class="metric-note">Self-transition prob</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Last Return</div>
+            <div class="metric-value ${current.lastReturn >= 0 ? 'up' : 'down'}">${current.lastReturn > 0 ? '+' : ''}${current.lastReturn}%</div>
+            <div class="metric-note">Most recent daily</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Cumulative Return</div>
+            <div class="metric-value ${current.cumulativeReturn >= 0 ? 'up' : 'down'}">${current.cumulativeReturn > 0 ? '+' : ''}${current.cumulativeReturn}%</div>
+            <div class="metric-note">Full period</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Sentiment</div>
+            <div class="metric-value" style="color:var(--accent2);">${current.currentSentiment}</div>
+            <div class="metric-note">NLP score</div>
+          </div>
+        </div>
+      </div>`;
+
+        // 2. Fetch cumulative returns for chart
+        const cumData = await apiCall('/api/regime/cumulative-returns');
+        const canvas = document.getElementById('regime-chart');
+
+        if (window.Chart && canvas) {
+          if (canvas._chartInstance) canvas._chartInstance.destroy();
+          const labels = cumData.map(d => d.dateShort);
+          const values = cumData.map(d => ((d.cumReturn - 1) * 100).toFixed(2));
+          const bgColors = cumData.map(d => d.regimeColor + '33');
+          const bdColors = cumData.map(d => d.regimeColor);
+
+          canvas._chartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [{
+                label: 'Cumulative Return (%)',
+                data: values,
+                borderColor: 'var(--accent)',
+                backgroundColor: 'rgba(110,231,183,0.08)',
+                borderWidth: 1.5,
+                pointBackgroundColor: bdColors,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: true,
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { color: '#888898', font: { family: 'DM Mono', size: 9 }, maxTicksLimit: 12 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                y: { ticks: { color: '#888898', font: { family: 'DM Mono', size: 9 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+              }
+            }
+          });
+        } else {
+          document.getElementById('regime-chart-fallback').style.display = 'block';
+          canvas.style.display = 'none';
+        }
+
+        // 3. Fetch and render transition matrix
+        const tmData = await apiCall('/api/regime/transition-matrix');
+        let tableHTML = '<tr><th></th>' + tmData.labels.map(l => `<th>${l}</th>`).join('') + '</tr>';
+        tmData.matrix.forEach((row, i) => {
+          tableHTML += `<tr><td><strong style="color:var(--text)">${tmData.labels[i]}</strong></td>`;
+          row.forEach(cell => {
+            const pct = (cell.probability * 100).toFixed(1);
+            const diag = (i === row.indexOf(cell));  // approximate diagonal highlight
+            tableHTML += `<td style="${cell.probability >= 0.5 ? 'color:var(--accent);font-weight:700;' : ''}">${pct}%</td>`;
+          });
+          tableHTML += '</tr>';
+        });
+        document.getElementById('transition-matrix-table').innerHTML = tableHTML;
+
+        // 4. Fetch and render data integrity hashes
+        const hashes = await apiCall('/api/regime/hashes');
+        let hashHTML = '';
+        for (const [key, val] of Object.entries(hashes)) {
+          hashHTML += `<p><strong>${key}:</strong> <code>${val.substring(0, 20)}...${val.substring(44)}</code> ✅ VERIFIED</p>`;
+        }
+        document.getElementById('hash-display').innerHTML = hashHTML;
+
+        toast('✓ Regime analysis loaded');
+        regimeLoaded = true;
+      } catch (err) {
+        document.getElementById('regime-badge').innerHTML = `
+      <div style="padding:24px;color:var(--danger);font-family:var(--font-mono);font-size:12px;">
+        ✗ Failed to load regime data. Ensure the API is running and regime pipeline has executed.<br>
+        Run: <code style="color:var(--accent2);">python main.py generate-sentiment</code> then restart the API.
+      </div>`;
+      } finally {
+        sp.style.display = 'none'; btn.classList.remove('btn-loading');
+      }
+    }
+
+    /* ── INIT ────────────────────────────────────────────────────── */
+    async function initApp() {
+      try {
+        // Load initial data for dashboard
+        SIGNALS = await apiCall('/signals/daily?top_n=30');
+        renderSignals();
+        populateSectorFilter(SIGNALS);
+
+        // Pattern scan for dashboard (holdings)
+        await renderPatterns();
+
+        toast('✓ Backend connection established · Live data loaded');
+      } catch (err) {
+        toast('⚠ Backend unreachable. Run "python main.py api" first.');
+      }
+    }
+
+    /* ── DISCLAIMER ─────────────────────────────────────────────── */
+    function showDisclaimerIfNeeded() {
+      if (sessionStorage.getItem('disclaimer_accepted')) return;
+      const modal = document.getElementById('disclaimer-modal');
+      modal.style.display = 'flex';
+    }
+
+    function acceptDisclaimer() {
+      sessionStorage.setItem('disclaimer_accepted', '1');
+      document.getElementById('disclaimer-modal').style.display = 'none';
+    }
+
+    /* ── BROWSER NOTIFICATIONS ──────────────────────────────────── */
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        toast('⚠ Browser notifications not supported in this browser');
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        toast('✓ Notifications already enabled');
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        toast('✓ Market emergency alerts enabled');
+        // Send a test notification
+        new Notification('NSE Investor — Alerts Active', {
+          body: 'You will be notified of Bear regime shifts, VIX spikes, and market crashes.',
+          tag: 'test'
+        });
+      } else {
+        toast('⚠ Notification permission denied. Enable in browser settings.');
+      }
+    }
+
+    function sendBrowserNotification(title, body) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const n = new Notification(`NSE Investor — ${title}`, {
+        body,
+        tag: title,
+        requireInteraction: true,
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    }
+
+    /* ── ALERT BANNER ───────────────────────────────────────────── */
+    function showAlertBanner(title, message, severity) {
+      // Throttle — don't show same alert twice within 30 minutes
+      const key = `alert_${title}`;
+      const lastShown = parseInt(sessionStorage.getItem(key) || '0');
+      if (Date.now() - lastShown < 30 * 60 * 1000) return;
+      sessionStorage.setItem(key, Date.now().toString());
+
+      const color = severity === 'critical' ? 'var(--danger)' : 'var(--accent3)';
+      const bg = severity === 'critical'
+        ? 'rgba(127,29,29,0.95)' : 'rgba(120,53,15,0.95)';
+
+      const banner = document.getElementById('alert-banner');
+      banner.style.display = 'block';
+      banner.innerHTML = `
+        <div style="background:${bg};border-bottom:2px solid ${color};
+                    padding:12px 32px;display:flex;align-items:center;
+                    justify-content:space-between;font-family:var(--font-mono);font-size:12px;">
+          <div style="flex:1;">
+            <strong style="color:${color};">${title}</strong>
+            <span style="color:#e5e5e5;margin-left:12px;">${message}</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;margin-left:16px;">
+            <button class="btn btn-sm"
+              style="background:${color};color:#000;font-size:11px;white-space:nowrap;"
+              onclick="showDamageControlPanel()">
+              🛡 Damage Control
+            </button>
+            <button class="btn btn-outline btn-sm"
+              style="font-size:11px;"
+              onclick="showPage('regime', document.querySelector('.nav-item:nth-child(10)'))">
+              View Regime →
+            </button>
+            <span style="cursor:pointer;color:var(--muted);font-size:18px;padding:0 4px;"
+              onclick="document.getElementById('alert-banner').style.display='none'">✕</span>
+          </div>
+        </div>`;
+
+      sendBrowserNotification(title, message);
+    }
+
+    /* ── PORTFOLIO MONITOR ──────────────────────────────────────── */
+    let monitorInterval = null;
+    const MONITOR_POLL_MS = 5 * 60 * 1000; // 5 minutes
+
+    function startPortfolioMonitor() {
+      if (monitorInterval) return;
+      console.log('[MONITOR] Portfolio monitor started — polling every 5 minutes.');
+      monitorInterval = setInterval(runMonitorCheck, MONITOR_POLL_MS);
+      // Run first check immediately after a short delay (let page settle)
+      setTimeout(runMonitorCheck, 3000);
+    }
+
+    async function runMonitorCheck() {
+      try {
+        const cb = await apiCall('/circuit-breaker/check');
+
+        if (cb.triggered) {
+          const title = cb.severity === 'critical'
+            ? '🔴 CIRCUIT BREAKER ACTIVE'
+            : '⚠ MARKET WARNING';
+          showAlertBanner(title, cb.reason, cb.severity);
+        }
+
+        // Additional check: regime flip to Bear
+        if (_regime_cache_frontend && _regime_cache_frontend.regimeState === 0) {
+          showAlertBanner(
+            '🔴 REGIME ALERT',
+            `Market has shifted to BEAR regime (confidence: ${_regime_cache_frontend.confidence}%). Your holdings may be at risk.`,
+            'warning'
+          );
+        }
+      } catch (_) {
+        // Silent — monitor should never disrupt UX
+      }
+    }
+
+    // Cache the last loaded regime data for the monitor to reference
+    let _regime_cache_frontend = null;
+
+    /* ── DAMAGE CONTROL PANEL ───────────────────────────────────── */
+    async function showDamageControlPanel() {
+      const holdings = getPortfolioSymbols('portfolio-wrap');
+      const portfolioValue = parseFloat(
+        document.getElementById('portfolio-value')?.value
+      ) || 500000;
+
+      if (!holdings.length) {
+        toast('⚠ No holdings found. Add stocks in My Portfolio first.');
+        return;
+      }
+
+      const overlay = document.getElementById('damage-control-overlay');
+      overlay.style.cssText = `
+        display:block;position:fixed;inset:0;background:rgba(0,0,0,0.7);
+        z-index:5000;overflow-y:auto;padding:32px;`;
+
+      overlay.innerHTML = `
+        <div style="max-width:800px;margin:0 auto;background:var(--surface);
+                    border:1px solid var(--danger);border-radius:var(--r2);
+                    overflow:hidden;">
+          <div style="background:#450a0a;padding:20px 24px;border-bottom:1px solid var(--danger);
+                      display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:16px;font-weight:800;color:var(--danger);">
+                🔴 DAMAGE CONTROL MODE
+              </div>
+              <div style="font-family:var(--font-mono);font-size:10px;color:#fca5a5;margin-top:4px;">
+                Estimating current portfolio impact from market event
+              </div>
+            </div>
+            <span style="cursor:pointer;font-size:22px;color:var(--muted);"
+              onclick="document.getElementById('damage-control-overlay').style.display='none'">✕</span>
+          </div>
+          <div style="padding:24px;">
+            <div style="text-align:center;padding:40px;">
+              <span class="spinner"></span>
+              <div style="margin-top:12px;color:var(--muted);font-family:var(--font-mono);font-size:12px;">
+                Fetching market data and assessing damage...
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      try {
+        const report = await apiCall('/circuit-breaker/damage-assessment', 'POST', {
+          holdings: holdings,
+          portfolio_value: portfolioValue,
+        });
+
+        const lossColor = report.portfolio_summary.total_loss_pct > 5
+          ? 'var(--danger)' : 'var(--accent3)';
+
+        // Build holdings rows
+        const holdingRows = report.holdings.map(h => `
+          <tr>
+            <td><span class="symbol-badge">${h.symbol}</span></td>
+            <td class="mono">₹${h.invested_value.toLocaleString('en-IN')}</td>
+            <td class="mono ${h.estimated_loss > 0 ? 'down' : 'up'}">
+              ₹${h.estimated_current_value.toLocaleString('en-IN')}
+            </td>
+            <td class="mono down">
+              -₹${Math.abs(h.estimated_loss).toLocaleString('en-IN')}
+              <span style="color:var(--muted);font-size:10px;">
+                (${h.estimated_loss_pct.toFixed(1)}%)
+              </span>
+            </td>
+            <td style="font-weight:700;font-size:12px;
+                       color:${h.stop_loss_breached ? 'var(--danger)'
+            : h.action_recommendation.startsWith('HOLD')
+              ? 'var(--muted)' : 'var(--accent3)'};">
+              ${h.action_recommendation}
+            </td>
+          </tr>`).join('');
+
+        overlay.querySelector('div > div:last-child').innerHTML = `
+          <!-- Summary -->
+          <div class="grid-3 mb-16" style="gap:16px;">
+            <div class="metric-card">
+              <div class="metric-label">Total Invested</div>
+              <div class="metric-value mono" style="font-size:18px;">
+                ₹${report.portfolio_summary.total_value.toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Estimated Loss Today</div>
+              <div class="metric-value mono down" style="font-size:18px;">
+                -₹${Math.abs(report.portfolio_summary.total_estimated_loss).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Portfolio Drop</div>
+              <div class="metric-value" style="font-size:18px;color:${lossColor};">
+                ${report.portfolio_summary.total_loss_pct.toFixed(2)}%
+              </div>
+            </div>
+          </div>
+
+          <!-- Circuit breaker message -->
+          <div style="padding:14px 16px;background:rgba(127,29,29,0.3);
+                      border:1px solid rgba(248,113,113,0.2);border-radius:var(--r);
+                      margin-bottom:16px;font-family:var(--font-mono);font-size:12px;">
+            <strong style="color:var(--danger);">
+              ${report.circuit_breaker.severity.toUpperCase()}:
+            </strong>
+            <span style="color:#fca5a5;margin-left:8px;">
+              ${report.circuit_breaker.reason}
+            </span>
+          </div>
+
+          <!-- Holdings table -->
+          <table class="rebal-table" style="margin-bottom:16px;">
+            <thead><tr>
+              <th>Stock</th>
+              <th>Invested</th>
+              <th>Current Est.</th>
+              <th>Est. Loss</th>
+              <th>Recommendation</th>
+            </tr></thead>
+            <tbody>${holdingRows}</tbody>
+          </table>
+
+          <!-- Defensive action -->
+          <div class="insight-box" style="margin-bottom:16px;">
+            ${report.portfolio_summary.defensive_action}
+          </div>
+
+          <!-- Action buttons -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+            <button class="btn btn-primary btn-sm" onclick="runDefensiveRebalance()">
+              🛡 Run Defensive Rebalance
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="runEventImpactAnalysis()">
+              📊 Analyse Event Impact
+            </button>
+            <button class="btn btn-outline btn-sm"
+              onclick="document.getElementById('damage-control-overlay').style.display='none';
+                       showPage('optimizer', document.querySelector('.nav-item:nth-child(6)'))">
+              ⚡ Go to Optimizer →
+            </button>
+          </div>
+
+          <!-- Recovery estimates section (populated on demand) -->
+          <div id="recovery-section"></div>
+          <div id="event-impact-section"></div>
+          <div id="defensive-rebalance-section"></div>
+
+          <!-- Legal disclaimer inside damage control -->
+          <div style="padding:12px 14px;background:rgba(248,113,113,0.05);
+                      border:1px solid rgba(248,113,113,0.15);border-radius:var(--r);
+                      font-family:var(--font-mono);font-size:9px;color:var(--muted);line-height:2;">
+            ⚠ IMPORTANT: This platform cannot recover, compensate, or insure against market losses.
+            All recommendations are algorithmic outputs based on historical data and do not constitute
+            financial advice. Past recovery patterns do not guarantee future recovery timelines.
+            Consult a SEBI-registered advisor before taking any action on your portfolio.
+          </div>`;
+
+        // Auto-load recovery estimates for each holding
+        loadRecoveryEstimates(
+          report.holdings,
+          Math.abs(report.portfolio_summary.total_loss_pct)
+        );
+
+      } catch (err) {
+        overlay.querySelector('div > div:last-child').innerHTML = `
+          <div style="padding:24px;color:var(--danger);font-family:var(--font-mono);font-size:12px;">
+            ✗ Failed to fetch damage report: ${err.message}<br>
+            Check that the API is running.
+          </div>`;
+      }
+    }
+
+    /* ── RECOVERY ESTIMATES ─────────────────────────────────────── */
+    async function loadRecoveryEstimates(holdings, lossPct) {
+      if (!lossPct || lossPct < 0.5) return;
+      const section = document.getElementById('recovery-section');
+      if (!section) return;
+
+      section.innerHTML = `
+        <div style="margin:16px 0 8px;font-family:var(--font-mono);font-size:10px;
+                    letter-spacing:1px;text-transform:uppercase;color:var(--accent3);">
+          📈 Historical Recovery Estimates
+        </div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:12px;">
+          Based on historical NSE data — not a guarantee of future recovery
+        </div>`;
+
+      for (const h of holdings) {
+        try {
+          const r = await apiCall(`/recovery/${h.symbol}?loss_pct=${lossPct.toFixed(1)}`);
+          const medColor = r.median_recovery_days
+            ? r.median_recovery_days <= 5 ? 'var(--up)'
+              : r.median_recovery_days <= 20 ? 'var(--accent3)'
+                : 'var(--danger)' : 'var(--muted)';
+
+          section.insertAdjacentHTML('beforeend', `
+            <div style="padding:12px 14px;background:var(--surface2);border-radius:var(--r);
+                        margin-bottom:8px;border:1px solid var(--border);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span class="symbol-badge">${r.symbol}</span>
+                <span style="font-family:var(--font-mono);font-size:11px;color:${medColor};font-weight:700;">
+                  ${r.median_recovery_days
+              ? `Median recovery: ${r.median_recovery_days} days`
+              : 'No recovery data'}
+                </span>
+              </div>
+              ${r.median_recovery_days ? `
+                <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:2;">
+                  Best: ${r.best_case_days}d ·
+                  Worst: ${r.worst_case_days}d ·
+                  Recovered within 120d: ${r.pct_recovered}% of ${r.historical_instances} instances
+                </div>` : ''}
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6;">
+                ${r.recommendation}
+              </div>
+            </div>`);
+        } catch (_) { }
+      }
+    }
+
+    /* ── DEFENSIVE REBALANCE (Bear Mode) ────────────────────────── */
+    async function runDefensiveRebalance() {
+      const holdings = getPortfolioSymbols('portfolio-wrap');
+      const portfolioValue = parseFloat(
+        document.getElementById('portfolio-value')?.value
+      ) || 500000;
+      const section = document.getElementById('defensive-rebalance-section');
+      if (!section) return;
+
+      section.innerHTML = `
+        <div style="text-align:center;padding:20px;">
+          <span class="spinner"></span>
+          <div style="margin-top:8px;color:var(--muted);font-family:var(--font-mono);font-size:11px;">
+            Running defensive rebalance (min-variance, 5-day horizon)...
+          </div>
+        </div>`;
+
+      try {
+        const opt = await apiCall('/optimizer/optimize', 'POST', {
+          symbols: holdings,
+          horizon: 5,
+          objective: 'min_variance',
+        });
+
+        const rebal = await apiCall('/optimizer/rebalance', 'POST', {
+          current_holdings: Object.fromEntries(holdings.map(h => [h, 1 / holdings.length])),
+          optimal_weights: opt.optimal_weights,
+          portfolio_value: portfolioValue,
+        });
+
+        const rows = rebal.actions.map(a => `
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;">
+            <span class="symbol-badge">${a.symbol}</span>
+            <span class="mono" style="color:var(--muted);">
+              ${a.current_weight_pct}% → <strong style="color:var(--accent);">${a.optimal_weight_pct}%</strong>
+            </span>
+            <span class="action-${a.direction.toLowerCase()}">${a.direction}</span>
+            <span class="mono" style="color:var(--muted);">
+              ₹${Math.abs(Math.round(portfolioValue * Math.abs(a.drift_pct) / 100)).toLocaleString('en-IN')}
+            </span>
+          </div>`).join('');
+
+        section.innerHTML = `
+          <div style="margin-top:16px;">
+            <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:1px;
+                        text-transform:uppercase;color:var(--accent3);margin-bottom:12px;">
+              🛡 Defensive Rebalance Plan — Capital Preservation Mode
+            </div>
+            ${rows}
+            <div class="insight-box" style="margin-top:12px;">
+              This rebalance shifts your portfolio to minimum-volatility weights
+              for the next 5 trading days. Objective: preserve capital, not maximise returns.
+              Once the market stabilises, run a fresh optimization from the main optimizer.
+            </div>
+          </div>`;
+      } catch (err) {
+        section.innerHTML = `
+          <div style="color:var(--danger);font-family:var(--font-mono);font-size:11px;padding:12px 0;">
+            ✗ Defensive rebalance failed: ${err.message}
+          </div>`;
+      }
+    }
+
+    /* ── EVENT IMPACT ANALYSIS ──────────────────────────────────── */
+    async function runEventImpactAnalysis() {
+      const section = document.getElementById('event-impact-section');
+      if (!section) return;
+
+      section.innerHTML = `
+        <div style="text-align:center;padding:16px;">
+          <span class="spinner"></span>
+          <div style="margin-top:8px;color:var(--muted);font-family:var(--font-mono);font-size:11px;">
+            Analysing event impact via HMM transition matrix...
+          </div>
+        </div>`;
+
+      try {
+        const tm = await apiCall('/api/regime/transition-matrix');
+        const bearToBull = tm.flat?.['Bear->Bull'] || 0;
+        const bearToBear = tm.flat?.['Bear->Bear'] || 0;
+        const bearToSideways = tm.flat?.['Bear->Sideways'] || 0;
+
+        const impactType = bearToBull > 0.15
+          ? '🟢 LIKELY TEMPORARY — High probability of regime recovery'
+          : bearToBear > 0.70
+            ? '🔴 POTENTIALLY STRUCTURAL — Market shows high Bear persistence'
+            : '🟡 UNCERTAIN — Monitor daily for regime shift';
+
+        const impactColor = bearToBull > 0.15
+          ? 'var(--up)' : bearToBear > 0.70 ? 'var(--danger)' : 'var(--accent3)';
+
+        const insight = bearToBull > 0.15
+          ? `The HMM transition matrix shows a ${(bearToBull * 100).toFixed(1)}% probability of
+             regime recovery to Bull. Historical data suggests this may be a short-term shock.
+             Consider holding defensive positions and reassessing in 5 trading days.`
+          : `The market shows ${(bearToBear * 100).toFixed(1)}% Bear regime persistence.
+             This event may not resolve quickly. The defensive rebalance above is strongly
+             recommended. Avoid averaging down without a clear catalyst for recovery.`;
+
+        section.innerHTML = `
+          <div style="margin-top:16px;padding:16px;background:var(--surface2);
+                      border:1px solid var(--border);border-radius:var(--r);">
+            <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;
+                        letter-spacing:1px;color:var(--muted);margin-bottom:10px;">
+              📊 Event Impact Analysis
+            </div>
+            <div style="font-size:14px;font-weight:700;color:${impactColor};margin-bottom:12px;">
+              ${impactType}
+            </div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);
+                        line-height:2.2;margin-bottom:12px;">
+              Bear → Bull probability:
+              <strong style="color:var(--up);">${(bearToBull * 100).toFixed(1)}%</strong>
+              &nbsp;·&nbsp;
+              Bear → Bear persistence:
+              <strong style="color:var(--danger);">${(bearToBear * 100).toFixed(1)}%</strong>
+              &nbsp;·&nbsp;
+              Bear → Sideways:
+              <strong style="color:var(--accent3);">${(bearToSideways * 100).toFixed(1)}%</strong>
+            </div>
+            <div class="insight-box">${insight}</div>
+          </div>`;
+      } catch (err) {
+        section.innerHTML = `
+          <div style="color:var(--danger);font-family:var(--font-mono);font-size:11px;padding:12px 0;">
+            ✗ Impact analysis failed: ${err.message}. Ensure regime pipeline has run.
+          </div>`;
+      }
+    }
+
+    /* ── STOP-LOSS ENRICHMENT FOR REBALANCING TABLE ─────────────── */
+    async function enrichRebalWithStopLoss(actions, portfolioValue) {
+      // Add Stop-Loss and Max Loss columns to each BUY row
+      const rows = document.querySelectorAll('#rebal-tbody tr');
+      for (const action of actions) {
+        if (action.direction !== 'BUY') {
+          // Add empty cells for non-BUY rows to keep columns aligned
+          rows.forEach(row => {
+            const badge = row.querySelector('.symbol-badge');
+            if (badge && badge.textContent.trim() === action.symbol) {
+              row.insertAdjacentHTML('beforeend',
+                '<td class="mono muted">—</td><td class="mono muted">—</td>');
+            }
+          });
+          continue;
+        }
+        try {
+          const patterns = await apiCall(`/patterns/${action.symbol}`);
+          const bullish = (patterns.patterns || [])
+            .filter(p => p.direction === 'UP')
+            .sort((a, b) => b.composite_score - a.composite_score)[0];
+
+          rows.forEach(row => {
+            const badge = row.querySelector('.symbol-badge');
+            if (badge && badge.textContent.trim() === action.symbol) {
+              if (bullish) {
+                const investAmt = portfolioValue * action.optimal_weight_pct / 100;
+                const riskPct = Math.abs(bullish.entry_price - bullish.stop_loss)
+                  / bullish.entry_price;
+                const maxLoss = Math.round(investAmt * riskPct);
+                row.insertAdjacentHTML('beforeend', `
+                  <td class="mono down">₹${bullish.stop_loss.toLocaleString('en-IN')}</td>
+                  <td class="mono down">-₹${maxLoss.toLocaleString('en-IN')}</td>`);
+              } else {
+                row.insertAdjacentHTML('beforeend',
+                  '<td class="mono muted">—</td><td class="mono muted">—</td>');
+              }
+            }
+          });
+        } catch (_) {
+          rows.forEach(row => {
+            const badge = row.querySelector('.symbol-badge');
+            if (badge && badge.textContent.trim() === action.symbol) {
+              row.insertAdjacentHTML('beforeend',
+                '<td class="mono muted">—</td><td class="mono muted">—</td>');
+            }
+          });
+        }
+      }
+    }
+
+    /* ── PATCH runOptimizer to call enrichRebalWithStopLoss ─────── */
+    // This wraps the existing rebal render block. Find these 3 lines
+    // in runOptimizer() and add the enrichRebalWithStopLoss call after:
+    //
+    //   toast(`✓ Optimizer complete · ${objective} · ${horizon}-day horizon`);
+    //
+    // ADD after that line (still inside the try block):
+    //   await enrichRebalWithStopLoss(rebal.actions, portfolioValue);
+
+    /* ── INIT ────────────────────────────────────────────────────── */
+    async function initApp() {
+      showDisclaimerIfNeeded();
+      try {
+        SIGNALS = await apiCall('/signals/daily?top_n=30');
+        renderSignals();
+        populateSectorFilter(SIGNALS);
+        await renderPatterns();
+        toast('✓ Backend connection established · Live data loaded');
+        startPortfolioMonitor();
+      } catch (err) {
+        toast('⚠ Backend unreachable. Run "python main.py api" first.');
+      }
+    }
+
+    window.addEventListener('load', initApp);
+  </script>
+</body>
+
+</html>

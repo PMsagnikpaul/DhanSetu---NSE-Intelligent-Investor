@@ -1,0 +1,54 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache/
+
+# Data (Excluded due to size and privacy)
+data/raw/
+data/processed/
+data/models/*.h5
+data/models/*.pkl
+!data/models/.gitkeep
+
+# Output and Temporary Files
+tmp/
+out.txt
+output.txt
+*out*.json
+*output*.txt
+*out*.txt
+test_fail_detail.txt
+test_cp_output.txt
+
+# Scratch / Debug Scripts (Unnecessary for Github)
+check.py
+check_api.py
+debug_test.py
+fix_unicode.py
+inspect_patterns.py
+test.py
+test_api.py
+test_html_api.py
+
+# Logs
+*.log
+
+# Test Artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# IDE Specific
+.vscode/
+.idea/
