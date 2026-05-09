@@ -1,6 +1,7 @@
 # File: src/processors/insider_trades.py
 
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import numpy as np
 from datetime import datetime, timedelta
 from typing import List, Dict
@@ -37,8 +38,8 @@ class InsiderTradeProcessor:
         """
         insider_trades = data_loader.load_insider_trades()
         
-        # FIXED: Use 2024 data instead of datetime.now() which would be 2026
-        cutoff_date = datetime(2024, 1, 1)
+        latest_date = insider_trades['Date'].max()
+        cutoff_date = latest_date - pd.Timedelta(days=self.lookback_days)
         
         # Filter to recent buys
         recent_buys = insider_trades[
@@ -117,7 +118,8 @@ class InsiderTradeProcessor:
         Track promoter buying/selling (highest signal strength)
         """
         insider_trades = data_loader.load_insider_trades()
-        cutoff_date = datetime(2024, 1, 1)
+        latest_date = insider_trades['Date'].max()
+        cutoff_date = latest_date - pd.Timedelta(days=self.lookback_days)
         
         # Filter to promoter trades only
         promoter_trades = insider_trades[
@@ -167,7 +169,8 @@ class InsiderTradeProcessor:
         Identify insiders who repeatedly buy same stock
         """
         insider_trades = data_loader.load_insider_trades()
-        cutoff_date = datetime(2024, 1, 1)
+        latest_date = insider_trades['Date'].max()
+        cutoff_date = latest_date - pd.Timedelta(days=self.lookback_days)
         
         buys = insider_trades[
             (insider_trades['Date'] >= cutoff_date) &

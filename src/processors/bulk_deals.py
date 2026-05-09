@@ -29,7 +29,8 @@ class BulkDealProcessor:
         bulk_deals = data_loader.load_bulk_deals()
         
         # Filter to recent data and buys only
-        cutoff_date = datetime(2024, 1, 1)
+        latest_date = bulk_deals['Date'].max()
+        cutoff_date = latest_date - pd.Timedelta(days=self.lookback_days)
         recent_buys = bulk_deals[
             (bulk_deals['Date'] >= cutoff_date) &
             (bulk_deals['Transaction_Type'] == 'BUY')
@@ -95,7 +96,8 @@ class BulkDealProcessor:
         """
         bulk_deals = data_loader.load_bulk_deals()
         
-        cutoff_date = datetime(2024, 1, 1)
+        latest_date = bulk_deals['Date'].max()
+        cutoff_date = latest_date - pd.Timedelta(days=self.lookback_days)
         recent_deals = bulk_deals[bulk_deals['Date'] >= cutoff_date].copy()
         
         signals = []
@@ -165,8 +167,8 @@ class BulkDealProcessor:
         
         bulk_deals = data_loader.load_bulk_deals()
         
-        # FIXED: Use 2024 data instead of datetime.now() which would be 2026
-        cutoff_date = datetime(2024, 1, 1)
+        latest_date = bulk_deals['Date'].max()
+        cutoff_date = latest_date - pd.Timedelta(days=self.lookback_days)
         recent_deals = bulk_deals[bulk_deals['Date'] >= cutoff_date].copy()
         
         signals = []

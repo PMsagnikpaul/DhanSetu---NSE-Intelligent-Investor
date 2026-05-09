@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Black Swan Protection - Damage Control Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* Premium Dark Mode CSS Variables */
+    :root {
+      --bg: #0b0f19;
+      --surface: #151a27;
+      --surface-dark: #0f131f;
+      --border: rgba(255, 255, 255, 0.05);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.1);
+      --danger-dark: #450a0a;
+      --warning: #f59e0b;
+      --up: #10b981;
+      --accent: #3b82f6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    /* Navigation */
+    .top-nav {
+      height: 64px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      background: rgba(11, 15, 25, 0.8);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 32px;
+    }
+
+    .header h1 { font-size: 32px; margin-bottom: 8px; font-weight: 700; letter-spacing: -1px; }
+    .header p { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    /* Buttons */
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #2563eb; }
+    .btn.danger { background: var(--danger); box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+    .btn.danger:hover { background: #dc2626; box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); }
+    .btn.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn.outline:hover { background: rgba(255,255,255,0.05); }
+
+    /* ── 1. GLOBAL ALERT BANNER ── */
+    #alert-banner-container {
+      position: sticky;
+      top: 64px;
+      z-index: 99;
+      height: 0;
+      overflow: visible;
+    }
+    #alert-banner {
+      display: none;
+      background: var(--danger-dark);
+      border-bottom: 1px solid var(--danger);
+      padding: 14px 32px;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
+      animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .alert-title { font-weight: 800; font-size: 15px; color: var(--danger); display: flex; align-items: center; gap: 8px; }
+    .alert-desc { color: #fca5a5; font-size: 14px; font-family: var(--font-mono); }
+
+    /* ── 2. DAMAGE CONTROL MODAL ── */
+    #damage-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 5000;
+      overflow-y: auto;
+      padding: 40px 20px;
+    }
+    
+    .modal {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--surface-dark);
+      border: 1px solid var(--danger);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.3);
+      animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.95) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      background: var(--danger-dark);
+      border-bottom: 1px solid var(--danger);
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body { padding: 32px; }
+
+    /* Metrics Grid */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .metric-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600; }
+    .metric-value { font-size: 28px; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+    
+    .down { color: var(--danger); }
+    .up { color: var(--up); }
+
+    /* Alert Message Box inside Modal */
+    .severity-box {
+      background: rgba(127, 29, 29, 0.3);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #fca5a5;
+    }
+    .severity-box strong { color: var(--danger); }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 14px; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .symbol-badge { background: rgba(59, 130, 246, 0.1); color: #60a5fa; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 12px; }
+
+    .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="top-nav">
+    <div class="logo">NSE Intelligent <span>Investor</span></div>
+  </header>
+
+  <!-- Global Alert Banner Container -->
+  <div id="alert-banner-container">
+    <div id="alert-banner">
+      <div>
+        <div class="alert-title pulse">🔴 CIRCUIT BREAKER ACTIVE</div>
+        <div class="alert-desc">Nifty 50 has plunged >5% today. Extreme volatility regime detected.</div>
+      </div>
+      <div>
+        <button class="btn outline" style="margin-right:8px;" onclick="hideBanner()">Dismiss</button>
+        <button class="btn outline" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.1);" onclick="openDamageControl()">Assess Damage</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div class="container">
+    <div class="header">
+      <h1>Dashboard Overview</h1>
+      <p>Simulate a sudden market collapse to see the Black Swan protection UI in action.</p>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom: 16px; font-weight: 600;">Simulation Controls</h3>
+      <p style="color: var(--muted); font-size: 14px; margin-bottom: 24px;">Click the button below to simulate an unprecedented market event that triggers the quantitative circuit breaker.</p>
+      
+      <button class="btn danger" onclick="triggerBlackSwan()">⚡ Simulate Market Crash</button>
+      <button class="btn outline" style="margin-left:12px;" onclick="resetDemo()">Reset Demo</button>
+    </div>
+    
+    <div class="card" style="opacity:0.5; pointer-events:none;">
+      <h3 style="margin-bottom: 16px; font-weight: 600;">Your Portfolio</h3>
+      <p style="color: var(--muted); font-size: 14px; margin-bottom: 16px;">Currently monitoring 4 stocks: RELIANCE, HDFCBANK, TCS, TATAMOTORS</p>
+      <!-- Mock list -->
+      <table style="width:50%;">
+        <tr><td><span class="symbol-badge">RELIANCE</span></td><td class="mono">₹1,50,000</td></tr>
+        <tr><td><span class="symbol-badge">HDFCBANK</span></td><td class="mono">₹1,00,000</td></tr>
+        <tr><td><span class="symbol-badge">TCS</span></td><td class="mono">₹80,000</td></tr>
+        <tr><td><span class="symbol-badge">TATAMOTORS</span></td><td class="mono">₹70,000</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- DAMAGE CONTROL MODAL OVERLAY -->
+  <div id="damage-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div style="font-size: 18px; font-weight: 800; color: var(--danger); display: flex; align-items: center; gap: 8px;">
+            <span class="pulse">🔴</span> DAMAGE CONTROL MODE
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 12px; color: #fca5a5; margin-top: 6px;">
+            Estimating current portfolio impact from live market event
+          </div>
+        </div>
+        <button class="btn outline" style="border:none; font-size:24px; padding:4px 12px;" onclick="closeDamageControl()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Summary Cards -->
+        <div class="grid-3">
+          <div class="metric-card">
+            <div class="metric-label">Total Invested</div>
+            <div class="metric-value mono">₹4,00,000</div>
+          </div>
+          <div class="metric-card" style="background:rgba(239,68,68,0.05); border-color:rgba(239,68,68,0.2);">
+            <div class="metric-label">Estimated Loss Today</div>
+            <div class="metric-value mono down">-₹29,800</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Portfolio Drop</div>
+            <div class="metric-value down">7.45%</div>
+          </div>
+        </div>
+
+        <!-- Severity Message -->
+        <div class="severity-box">
+          <strong>CRITICAL:</strong> Nifty 50 gap down >5% (Index: 21,304.50). Widespread selling pressure across all sectors. High correlation breakdown.
+        </div>
+
+        <!-- Holdings Table -->
+        <table>
+          <thead>
+            <tr>
+              <th>Stock</th>
+              <th>Invested</th>
+              <th>Est. Value</th>
+              <th>Est. Loss</th>
+              <th>Action Required</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="symbol-badge">TATAMOTORS</span></td>
+              <td class="mono">₹70,000</td>
+              <td class="mono down">₹59,500</td>
+              <td class="mono down">-₹10,500 <span style="font-size:11px;color:var(--muted)">(-15.0%)</span></td>
+              <td style="font-weight:700; color:var(--danger); font-size:12px;">LIQUIDATE (STOP-LOSS BREACHED)</td>
+            </tr>
+            <tr>
+              <td><span class="symbol-badge">HDFCBANK</span></td>
+              <td class="mono">₹1,00,000</td>
+              <td class="mono down">₹89,000</td>
+              <td class="mono down">-₹11,000 <span style="font-size:11px;color:var(--muted)">(-11.0%)</span></td>
+              <td style="font-weight:700; color:var(--danger); font-size:12px;">LIQUIDATE (STOP-LOSS BREACHED)</td>
+            </tr>
+            <tr>
+              <td><span class="symbol-badge">RELIANCE</span></td>
+              <td class="mono">₹1,50,000</td>
+              <td class="mono down">₹1,44,000</td>
+              <td class="mono down">-₹6,000 <span style="font-size:11px;color:var(--muted)">(-4.0%)</span></td>
+              <td style="font-weight:700; color:var(--warning); font-size:12px;">REDUCE POSITION</td>
+            </tr>
+            <tr>
+              <td><span class="symbol-badge">TCS</span></td>
+              <td class="mono">₹80,000</td>
+              <td class="mono down">₹77,700</td>
+              <td class="mono down">-₹2,300 <span style="font-size:11px;color:var(--muted)">(-2.8%)</span></td>
+              <td style="font-weight:700; color:var(--muted); font-size:12px;">HOLD (DEFENSIVE)</td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function triggerBlackSwan() {
+      const banner = document.getElementById('alert-banner');
+      banner.style.display = 'flex';
+      
+      // Add slight delay to simulate backend processing before showing the button
+      setTimeout(() => {
+        // Optional: play an alert sound or vibration if needed
+      }, 100);
+    }
+
+    function hideBanner() {
+      document.getElementById('alert-banner').style.display = 'none';
+    }
+
+    function openDamageControl() {
+      // Hide banner when opening modal
+      hideBanner();
+      
+      const overlay = document.getElementById('damage-overlay');
+      overlay.style.display = 'block';
+    }
+
+    function closeDamageControl() {
+      document.getElementById('damage-overlay').style.display = 'none';
+    }
+
+    function resetDemo() {
+      hideBanner();
+      closeDamageControl();
+    }
+  </script>
+</body>
+</html>

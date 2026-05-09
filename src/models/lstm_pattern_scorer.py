@@ -1,5 +1,6 @@
 # File: src/models/lstm_pattern_scorer.py
 
+# pyrefly: ignore [missing-import]
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -59,8 +60,8 @@ class LSTMPatternScorer:
         ])
         
         model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
-            loss='binary_crossentropy',
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.0005),
+            loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.1),
             metrics=['accuracy', tf.keras.metrics.AUC(name='auc')]
         )
         return model
@@ -259,10 +260,18 @@ class LSTMPatternScorer:
             return float(pattern.get('raw_confidence', 50.0))
         
         X = seq.reshape(1, self.seq_len, self.n_features)
-        prob = float(self.model.predict(X, verbose=0)[0][0])
+        raw_prob = float(self.model.predict(X, verbose=0)[0][0])
         
-        # Scale to 0-100
-        return round(prob * 100, 2)
+        # ── CALIBRATION STRETCH ────────────────────────────────────────
+        # Problem: model output clusters in [0.35, 0.55] — low discrimination.
+        # Fix: stretch the sigmoid output to make use of the full [0, 100] range.
+        LOW_RAW,  HIGH_RAW  = 0.30, 0.70
+        LOW_OUT,  HIGH_OUT  = 10.0, 90.0
+        
+        calibrated = LOW_OUT + (raw_prob - LOW_RAW) / (HIGH_RAW - LOW_RAW) * (HIGH_OUT - LOW_OUT)
+        calibrated = max(0.0, min(100.0, calibrated))
+        
+        return round(calibrated, 1)
     
     # ---------------------------------------------------------------------
     # SAVE / LOAD
@@ -281,8 +290,8 @@ class LSTMPatternScorer:
             )
         self.model = keras.models.load_model(self.model_path, compile=False)
         self.model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
-            loss='binary_crossentropy',
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.0005),
+            loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.1),
             metrics=['accuracy', tf.keras.metrics.AUC(name='auc')]
         )
         with open(self.scaler_path, 'rb') as f:

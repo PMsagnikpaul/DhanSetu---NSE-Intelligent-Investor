@@ -12,6 +12,26 @@ from src.data_loader import data_loader  # type: ignore
 from src.config import config  # type: ignore
 from src.utils.helpers import get_market_regime  # type: ignore
 
+def normalize_scores(signals: list[dict]) -> list[dict]:
+    """
+    Stretch composite scores to use the full 0–100 range.
+    Prevents score compression where all stocks cluster in 17–68.
+    Called once after all per-stock scores are computed.
+    """
+    if not signals:
+        return signals
+    scores = [s["composite_score"] for s in signals]
+    min_s, max_s = min(scores), max(scores)
+    if max_s - min_s < 1.0:
+        return signals  # all identical — don't distort
+    for s in signals:
+        raw = s["composite_score"]
+        # Min-max stretch: maps [min, max] → [10, 95]
+        s["composite_score"] = round(
+            10 + (raw - min_s) / (max_s - min_s) * 85, 1
+        )
+    return signals
+
 class SignalScorer:
     """
     Unified signal scoring and ranking system
@@ -149,6 +169,16 @@ class SignalScorer:
             if sector == 'Unknown':
                 continue
                 
+            # EXCLUSION FILTER: require at least one signal source to fire meaningfully
+            # Prevents floor-value stocks from appearing in ranked output
+            has_meaningful_signal = (
+                data['bulk_score'] > 5 or
+                data['insider_score'] > 5 or
+                data['filing_score'] > 5
+            )
+            if not has_meaningful_signal:
+                continue
+                
             composite_score = (
                 data['bulk_score'] * self.bulk_weight +
                 data['insider_score'] * self.insider_weight +
@@ -191,6 +221,7 @@ class SignalScorer:
             })
         
         ranked_signals.sort(key=lambda x: x['composite_score'], reverse=True)
+        ranked_signals = normalize_scores(ranked_signals)
         
         print(f"Generated {len(ranked_signals)} ranked signals")
         

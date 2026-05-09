@@ -1317,7 +1317,7 @@
       <!-- ════════════════════════════════════════════════ PAGE: DASHBOARD -->
       <div class="page active" id="page-dashboard" style="padding:32px;">
         <div class="welcome-band">
-          <div class="welcome-title">Good morning, Investor 👋</div>
+          <div class="welcome-title">Hello, Investor 👋</div>
           <div class="welcome-sub">Your LSTM-powered portfolio intelligence — updated today at 9:15 AM IST</div>
         </div>
 
@@ -1429,6 +1429,10 @@
               <h3 class="mb-16">Portfolio Input</h3>
               <div class="input-group">
                 <label class="input-label">Your Holdings (Nifty 50 symbols)</label>
+                <div
+                  style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-bottom:6px;line-height:1.4;">
+                  Current weights default to 0% (treated as a fresh allocation).
+                </div>
                 <div class="tag-input-wrap" id="holdings-wrap" onclick="focusTagInput('holdings-input')">
                   <div class="tag">RELIANCE<span class="tag-remove" onclick="removeTag(this,'holdings-wrap')">×</span>
                   </div>
@@ -1538,6 +1542,7 @@
                 excellent — you earn ₹1.49 of return for every unit of risk. In a bad month with 95% confidence, you
                 could lose up to 1.83% of portfolio value. Your portfolio is beating the Nifty 50 by 4.13% annualised.
               </div>
+              <div id="sharpe-note"></div>
             </div>
           </div>
 
@@ -1552,7 +1557,7 @@
               <thead>
                 <tr>
                   <th>Symbol</th>
-                  <th>Current Weight</th>
+                  <th id="rebal-th-current">Current Weight</th>
                   <th>Optimal Weight</th>
                   <th>Current Value</th>
                   <th>Action</th>
@@ -2103,25 +2108,89 @@
         document.getElementById('m-beta').textContent = risk.portfolio_beta ? risk.portfolio_beta.toFixed(2) : '—';
         document.getElementById('risk-insight').textContent = risk.plain_english_summary;
 
+        const sharpeVal = risk.sharpe_ratio;
+        const sharpeNote = document.getElementById('sharpe-note');
+        if (sharpeNote) {
+          if (sharpeVal < 1.0) {
+            sharpeNote.innerHTML = `
+              <div style="margin-top:10px;padding:10px 14px;
+                          background:rgba(240,165,0,0.08);
+                          border:1px solid rgba(240,165,0,0.25);
+                          border-radius:var(--r);
+                          font-family:var(--font-mono);font-size:10px;
+                          color:var(--accent3);line-height:1.9;">
+                ⚡ <strong>Tip:</strong> Sharpe of ${sharpeVal.toFixed(2)} is below the paper-validated
+                target of 1.54. This is common when all stocks are from similar sectors
+                (Financials + IT). Try the
+                <strong style="cursor:pointer;text-decoration:underline;"
+                  onclick="document.getElementById('signal-driven-btn')?.click()">
+                  Signal-Driven Pipeline
+                </strong>
+                — it auto-selects lower-correlation stocks from the Opportunity Radar,
+                typically producing a higher Sharpe.
+              </div>`;
+          } else {
+            sharpeNote.innerHTML = '';
+          }
+        }
+
         // Fetch benchmark for Alpha and Beta vs Nifty 50
         try {
           const bench = await apiCall('/optimizer/benchmark', 'POST', { weights: opt.optimal_weights });
+          const alphaVal = bench.alpha_vs_nifty50;
+          const betaVal = bench.beta_vs_nifty50;
+
           document.getElementById('m-alpha').textContent =
-            (bench.alpha_vs_nifty50 >= 0 ? '+' : '') + bench.alpha_vs_nifty50.toFixed(2) + '%';
-          document.getElementById('m-beta').textContent = bench.beta_vs_nifty50.toFixed(2);
+            (alphaVal >= 0 ? '+' : '') + alphaVal.toFixed(2) + '%';
+          document.getElementById('m-beta').textContent = betaVal.toFixed(2);
+
+          const alphaCard = document.getElementById('m-alpha').closest('.metric-card');
+          if (alphaCard) {
+            const noteEl = alphaCard.querySelector('.metric-note, .metric-sub, [class*="note"], [class*="sub"]');
+            if (noteEl) {
+              if (alphaVal >= 0) {
+                noteEl.textContent = `Outperforms Nifty 50 by ${alphaVal.toFixed(2)}%`;
+                noteEl.style.color = 'var(--up)';
+              } else {
+                noteEl.textContent = `Underperforms Nifty 50 by ${Math.abs(alphaVal).toFixed(2)}%`;
+                noteEl.style.color = 'var(--danger)';
+              }
+            }
+          }
+
+          const betaCard = document.getElementById('m-beta').closest('.metric-card');
+          if (betaCard) {
+            const betaNoteEl = betaCard.querySelector('.metric-note, .metric-sub, [class*="note"], [class*="sub"]');
+            if (betaNoteEl) {
+              if (betaVal < 0.8) {
+                betaNoteEl.textContent = 'Lower volatility than market';
+              } else if (betaVal <= 1.2) {
+                betaNoteEl.textContent = 'Moves in line with market';
+              } else {
+                betaNoteEl.textContent = 'Higher volatility than market';
+              }
+            }
+          }
         } catch (_) {
           // Non-fatal — alpha/beta stay as '—' if benchmark call fails
         }
 
         // 3. Generate Rebalancing
-        const currentWeights = {};
-        tags.forEach(t => currentWeights[t] = 1.0 / tags.length);
+        const currentHoldingsINR = {};
+        tags.forEach(t => currentHoldingsINR[t] = portfolioValue / tags.length);
 
         const rebal = await apiCall('/optimizer/rebalance', 'POST', {
-          current_holdings: currentWeights,
+          current_holdings: currentHoldingsINR,
           optimal_weights: opt.optimal_weights,
           portfolio_value: portfolioValue
         });
+
+        const allZeroCurrentWeight = rebal.actions.every(a => a.current_weight_pct === 0);
+        const currentWeightHeader = allZeroCurrentWeight
+          ? 'Current Weight (Fresh)'
+          : 'Current Weight';
+        const thCurrent = document.getElementById('rebal-th-current');
+        if (thCurrent) thCurrent.textContent = currentWeightHeader;
 
         const tbody = document.getElementById('rebal-tbody');
         tbody.innerHTML = rebal.actions.map(a => `
@@ -2202,7 +2271,26 @@
         }
 
         PATTERNS[currentPatternTab] = data; // Cache for detail view
-        const filtered = data.filter(p => dir === 'all' || p.direction === dir);
+
+        function detectConflictingSignals(patterns) {
+          const bySymbol = {};
+          for (const p of patterns) {
+            if (!bySymbol[p.symbol]) bySymbol[p.symbol] = [];
+            bySymbol[p.symbol].push(p);
+          }
+          for (const symbol of Object.keys(bySymbol)) {
+            const symPatterns = bySymbol[symbol];
+            const hasBullish = symPatterns.some(p => p.direction === 'UP');
+            const hasBearish = symPatterns.some(p => p.direction === 'DOWN');
+            if (hasBullish && hasBearish) {
+              symPatterns.forEach(p => { p._conflicting = true; });
+            }
+          }
+          return patterns;
+        }
+
+        let processedData = detectConflictingSignals(data);
+        const filtered = processedData.filter(p => dir === 'all' || p.direction === dir);
 
         if (!filtered.length) {
           grid.innerHTML = `<div style="grid-column:1/-1;"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">No patterns detected for ${currentPatternTab}</div></div></div>`;
@@ -2213,8 +2301,40 @@
           const isUp = p.direction === 'UP';
           const clr = isUp ? 'var(--up)' : 'var(--down)';
           const typeName = p.pattern_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+          const wr = parseFloat(p.win_rate_pct) || 0;
+          const wrClr = wr >= 70 ? 'var(--up)'
+            : wr >= 60 ? '#4ade80'
+              : wr >= 50 ? 'var(--accent3)'
+                : 'var(--danger)';
+
+          const cautionBadge = wr < 50 ? `
+            <span style="display:inline-block;background:rgba(248,113,113,0.15);
+                         border:1px solid rgba(248,113,113,0.4);border-radius:3px;
+                         padding:1px 6px;font-family:var(--font-mono);font-size:8px;
+                         color:var(--danger);text-transform:uppercase;
+                         letter-spacing:0.8px;margin-left:6px;">
+              ⚠ Below threshold
+            </span>` : '';
+
+          const winRateTierLabel = wr >= 70 ? 'Strong edge'
+            : wr >= 60 ? 'Good edge'
+              : wr >= 50 ? 'Marginal edge'
+                : 'Insufficient data';
+
+          const conflictBanner = p._conflicting ? `
+            <div style="background:rgba(240,165,0,0.1);border:1px solid rgba(240,165,0,0.3);
+                        border-radius:4px;padding:6px 10px;margin-bottom:8px;
+                        font-family:var(--font-mono);font-size:9px;color:var(--accent3);
+                        text-transform:uppercase;letter-spacing:0.8px;">
+              ⚡ Conflicting signals on ${p.symbol} —
+              stock is at a key price level with both bullish and bearish setups.
+              Wait for a confirmed directional close before acting.
+            </div>` : '';
+
           return `
       <div class="pattern-card ${isUp ? 'up' : 'down'}" onclick="openPatternDetail('${p.symbol}','${currentPatternTab}')">
+        ${conflictBanner}
         <div class="pattern-header">
           <div>
             <div class="pattern-type-name">${typeName}</div>
@@ -2246,9 +2366,14 @@
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <div>
-            <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted)">Win Rate (${p.sample_count} setups)</div>
-            <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:${clr}">${fmtWinRate(p.win_rate_pct)}</div>
-            <div class="wr-bar" style="width:120px;"><div class="wr-fill" style="width:${parseFloat(p.win_rate_pct) || 0}%;background:${clr};"></div></div>
+            <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted)">Win Rate</div>
+            <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:${wrClr};">
+               ${fmtWinRate(p.win_rate_pct)}
+               ${cautionBadge}
+            </div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-top:2px;">
+               ${winRateTierLabel} · ${p.sample_count} historical setups
+            </div>
           </div>
           <div style="text-align:right;">
             <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted)">RSI (14)</div>
@@ -2400,7 +2525,18 @@
         <div>
           <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Current Market Regime</div>
           <div style="font-size:22px;font-weight:800;color:${color};">${current.name}</div>
-          <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:4px;">As of ${current.date}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:6px;">
+             As of <strong style="color:var(--text);">${current.date}</strong>
+             <span style="font-size:9px;color:var(--muted);margin-left:6px;">
+               (last date in training dataset · Aug 2021 – Aug 2024)
+             </span>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);
+                      margin-top:4px;padding:6px 10px;background:rgba(79,156,249,0.08);
+                      border-radius:4px;border-left:3px solid var(--blue, #4f9cf9);">
+            Live NSE data integration planned for production.
+            Regime classification is based on 725 trading days of validated historical data.
+          </div>
         </div>
         <div class="grid-4" style="flex:1;gap:16px;">
           <div class="metric-card">
@@ -2411,12 +2547,21 @@
           <div class="metric-card">
             <div class="metric-label">Last Return</div>
             <div class="metric-value ${current.lastReturn >= 0 ? 'up' : 'down'}">${current.lastReturn > 0 ? '+' : ''}${current.lastReturn}%</div>
-            <div class="metric-note">Most recent daily</div>
+            <div class="metric-note" style="color:var(--muted);">
+              ${current.date} · training data
+            </div>
+            <div style="font-size:8px;color:var(--muted);margin-top:2px;font-style:italic;">
+              (not today's Nifty return)
+            </div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Cumulative Return</div>
             <div class="metric-value ${current.cumulativeReturn >= 0 ? 'up' : 'down'}">${current.cumulativeReturn > 0 ? '+' : ''}${current.cumulativeReturn}%</div>
-            <div class="metric-note">Full period</div>
+            <div class="metric-note">Nifty 50 index · Aug 2021 – Aug 2024</div>
+            <div style="font-family:var(--font-mono);font-size:8px;color:var(--muted);
+                        margin-top:2px;font-style:italic;">
+              ≈${(current.cumulativeReturn / 3).toFixed(1)}% annualised over 3 years
+            </div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Sentiment</div>
@@ -3000,7 +3145,7 @@
       // Add Stop-Loss and Max Loss columns to each BUY row
       const rows = document.querySelectorAll('#rebal-tbody tr');
       for (const action of actions) {
-        if (action.direction !== 'BUY') {
+        if (action.action !== 'BUY') {
           // Add empty cells for non-BUY rows to keep columns aligned
           rows.forEach(row => {
             const badge = row.querySelector('.symbol-badge');
